@@ -182,6 +182,25 @@ config LEMOTE_FULONG
 	  Lemote Fulong mini-PC board based on the Chinese Loongson-2E CPU and
 	  an FPGA northbridge
 
+config STLS2F_SYSTEM
+    bool "Loongson 2F-based platforms"
+    select CEVT_R4K
+    select CSRC_R4K
+    select SYS_HAS_CPU_LOONGSON2
+    select DMA_NONCOHERENT
+    select HAVE_STD_PC_SERIAL_PORT
+    select HW_HAS_PCI
+    select IRQ_CPU
+    select SYS_SUPPORTS_32BIT_KERNEL
+    select SYS_SUPPORTS_64BIT_KERNEL
+    select SYS_SUPPORTS_LITTLE_ENDIAN
+    select SYS_SUPPORTS_HIGHMEM
+    select SYS_HAS_EARLY_PRINTK
+    select CPU_HAS_WB
+	help
+	  This is a family of machines that are based around the Loongson-2F CPU,
+	  STLS2F. Examples of such machines are the Yeelong and the Gdium.
+
 config MIPS_MALTA
 	bool "MIPS Malta board"
 	select ARCH_MAY_HAVE_PC_FDC
@@ -646,6 +665,7 @@ source "arch/mips/sibyte/Kconfig"
 source "arch/mips/txx9/Kconfig"
 source "arch/mips/vr41xx/Kconfig"
 source "arch/mips/cavium-octeon/Kconfig"
+source "arch/mips/lemote/lm2f/Kconfig"
 
 endmenu
 
@@ -1011,8 +1031,8 @@ config CPU_LOONGSON2
 	select CPU_SUPPORTS_64BIT_KERNEL
 	select CPU_SUPPORTS_HIGHMEM
 	help
-	  The Loongson 2E processor implements the MIPS III instruction set
-	  with many extensions.
+	  The Loongson 2E/2F processors implement the MIPS III instruction set
+	  with many custom extensions.
 
 config CPU_MIPS32_R1
 	bool "MIPS32 Release 1"

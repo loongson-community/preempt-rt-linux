@@ -311,6 +311,13 @@ load-$(CONFIG_LEMOTE_FULONG) +=0xffffffff80100000
 cflags-$(CONFIG_LEMOTE_FULONG) += -I$(srctree)/arch/mips/include/asm/mach-lemote
 
 #
+# Loongson 2F-based systems
+#
+core-$(CONFIG_STLS2F_SYSTEMS) +=arch/mips/lemote/lm2f/
+load-$(CONFIG_STLS2F_SYSTEMS) +=0xffffffff80200000
+cflags-$(CONFIG_STLS2F_SYSTEMS) += -I$(srctree)/arch/mips/include/asm/mach-stls2f
+
+#
 # MIPS Malta board
 #
 core-$(CONFIG_MIPS_MALTA)	+= arch/mips/mti-malta/
