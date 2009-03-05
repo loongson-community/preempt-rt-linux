@@ -35,17 +35,18 @@
 #include <linux/irq.h>
 
 #include <asm/mips-boards/bonito64.h>
+#include <stls2f.h>
 
 
 static inline void bonito_irq_enable(unsigned int irq)
 {
-	BONITO_INTENSET = (1 << (irq - BONITO_IRQ_BASE));
+	BONITO_INTENSET = (1 << (irq - LS2F_IRQ_BASE));
 	mmiowb();
 }
 
 static inline void bonito_irq_disable(unsigned int irq)
 {
-	BONITO_INTENCLR = (1 << (irq - BONITO_IRQ_BASE));
+	BONITO_INTENCLR = (1 << (irq - LS2F_IRQ_BASE));
 	mmiowb();
 }
 
@@ -66,8 +67,8 @@ void bonito_irq_init(void)
 {
 	u32 i;
 
-	for (i = BONITO_IRQ_BASE; i < BONITO_IRQ_BASE + 11; i++)
+	for (i = LS2F_IRQ_BASE; i < LS2F_IRQ_BASE + 11; i++)
 		set_irq_chip_and_handler(i, &bonito_irq_type, handle_level_irq);
 
-	setup_irq(BONITO_IRQ_BASE + 10, &dma_timeout_irqaction);
+	setup_irq(LS2F_IRQ_BASE + 10, &dma_timeout_irqaction);
 }

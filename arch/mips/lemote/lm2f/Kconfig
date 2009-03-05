@@ -1,6 +1,6 @@
 choice
-	prompt "Specific Machine Type"
-	depends on STLS2F_SYSTEM
+	prompt "Machine Type"
+	depends on STLS2F_SYSTEMS
 	default EMTEC_GDIUM
 
 config EMTEC_GDIUM
@@ -23,6 +23,14 @@ config EMTEC_GDIUM
 	help
 	  Specific support for the Emtec Gdium Liberty 1000 netbook, based on
 	  the Loongson-2F CPU.
+
+config GDIUM_VERSION
+	int "Gdium Revision"
+	depends on EMTEC_GDIUM
+	default 3
+	help
+	  Select the revision of the Emtec Gdium motherboard you have. If you are
+	  unsure of what to say, leave this as 3.
 
 endchoice
 

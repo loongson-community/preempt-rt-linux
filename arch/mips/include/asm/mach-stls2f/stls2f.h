@@ -21,6 +21,9 @@ extern unsigned long cpu_clock_freq;
 
 #define MSK(n) (1 << (n))
 
+/* IRQ-related */
+#define LS2F_IRQ_BASE 32
+
 /* register regions */
 #define LS2F_CONFIG_PHYS 0x1fe00100ull
 #define LS2F_CONFIG_SIZE 0x100

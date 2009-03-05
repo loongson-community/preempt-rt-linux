@@ -57,6 +57,11 @@
 #define	MACH_MIKROTIK_RB532	0	/* Mikrotik RouterBoard 532 	*/
 #define MACH_MIKROTIK_RB532A	1	/* Mikrotik RouterBoard 532A 	*/
 
+/*
+ * Valid machine type for the STLS2F CPUs
+ */
+#define MACH_STLS2F		29
+
 #define CL_SIZE			COMMAND_LINE_SIZE
 
 extern char *system_type;

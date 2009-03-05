@@ -182,7 +182,7 @@ config LEMOTE_FULONG
 	  Lemote Fulong mini-PC board based on the Chinese Loongson-2E CPU and
 	  an FPGA northbridge
 
-config STLS2F_SYSTEM
+config STLS2F_SYSTEMS
     bool "Loongson 2F-based platforms"
     select CEVT_R4K
     select CSRC_R4K

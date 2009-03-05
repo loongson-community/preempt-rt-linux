@@ -20,27 +20,19 @@
 #include <linux/init.h>
 #include <linux/suspend.h>
 
-
 static int ls2f_valid(suspend_state_t state);
-static int ls2f_set_target(suspend_state_t state);
 static int ls2f_prepare(void);
 static int ls2f_enter(suspend_state_t state);
 static void ls2f_finish(suspend_state_t state);
 
-static struct platform_suspend_ops ls2f_suspend_ops {
-	.valid = ls2f_valid;
-	.set_target = ls2f_set_target;
-	.prepare = ls2f_prepare;
-	.enter = ls2f_enter;
-	.finish = ls2f_finish;
+static struct platform_suspend_ops ls2f_suspend_ops = {
+	.valid = ls2f_valid,
+	.prepare = ls2f_prepare,
+	.enter = ls2f_enter,
+	.finish = ls2f_finish
 };
 
 static int ls2f_valid(suspend_state_t state)
-{
-
-}
-
-static int ls2f_set_target(suspend_state_t state)
 {
 
 }
