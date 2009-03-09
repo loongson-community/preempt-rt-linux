@@ -11,6 +11,7 @@
 extern void *ddr_cont; /* ioremap'd address for DDR controller */
 extern void *core_config; /* for core config registers */
 extern void *addr_win_config; /* address window config */
+extern void *pcictrl_base; /* PCI control space */
 
 extern unsigned long cpu_clock_freq;
 
@@ -77,3 +78,6 @@ extern unsigned long cpu_clock_freq;
 /* accessor methods specific to the config registers */
 #define ls2f_config_writel(reg, value) (ls2f_writel(value, core_config + (reg)))
 #define ls2f_config_readl(reg) (ls2f_readl(core_config + (reg)))
+
+/* access the PCI control space */
+#define PCIACCESS(x) (*(volatile u32 *)((char *)pcictrl_base + (x)))

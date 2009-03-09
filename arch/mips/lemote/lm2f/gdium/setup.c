@@ -50,6 +50,7 @@ unsigned long bus_clock;
 unsigned int memsize;
 unsigned int highmemsize;
 
+void *pcictrl_base;
 void *ddr_cont;
 void *core_config;
 void *addr_win_config;
@@ -97,6 +98,7 @@ void __init plat_mem_setup(void)
 	core_config = ioremap_nocache(LS2F_CONFIG_PHYS, LS2F_CONFIG_SIZE);
 	addr_win_config = ioremap_nocache(LS2F_ADDR_WINDOW_CONFIG_PHYS,
 		LS2F_ADDR_WINDOW_CONFIG_SIZE);
+	pcictrl_base = ioremap_nocache(BONITO_REG_BASE, BONITO_REG_SIZE);
 
 	mips_reboot_setup();
 

@@ -31,6 +31,7 @@
 #include <linux/init.h>
 
 #include <asm/mips-boards/bonito64.h>
+#include <stls2f.h>
 
 #define PCI_ACCESS_READ  0
 #define PCI_ACCESS_WRITE 1
@@ -61,10 +62,10 @@ static int loongson2f_pcibios_config_access(unsigned char access_type,
 		return -1;
 
 		if (access_type == PCI_ACCESS_WRITE) {
-			BONITO(reg) = cpu_to_le32(*data);
+			PCIACCESS(reg) = cpu_to_le32(*data);
 		}
 		else {
-			*data = le32_to_cpu(BONITO(reg));
+			*data = le32_to_cpu(PCIACCESS(reg));
 		}
 		return 0;
 	}
