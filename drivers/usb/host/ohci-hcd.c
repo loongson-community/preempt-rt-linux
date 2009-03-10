@@ -1072,7 +1072,7 @@ MODULE_LICENSE ("GPL");
 
 #ifdef CONFIG_MFD_SM501
 #include "ohci-sm501.c"
-#define SM501_OHCI_DRIVER	ohci_hcd_sm501_driver
+#define SM501_OHCI_DRIVER	ohci_sm501_hc_driver
 #endif
 
 #ifdef CONFIG_MFD_TC6393XB

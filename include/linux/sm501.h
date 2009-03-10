@@ -53,15 +53,6 @@
 #endif
 
 extern resource_size_t sm50x_mem_size;
-extern unsigned long SmRead8(unsigned long nOffset);
-extern unsigned long SmRead16(unsigned long nOffset);
-extern unsigned long SmRead32(unsigned long nOffset);
-
-extern void SmWrite8(unsigned long nOffset, unsigned long nData);
-extern void SmWrite16(unsigned long nOffset, unsigned long nData);
-extern void SmWrite32(unsigned long nOffset, unsigned long nData);
-
-extern void SmMemset(unsigned long nOffset, unsigned char val, int count);
 
 extern unsigned long sm501_find_clock(int clksrc, unsigned long req_freq);
 extern unsigned long sm501_set_clock(struct device *dev, int clksrc, unsigned long req_freq);
@@ -180,4 +171,81 @@ static const struct fb_videomode SM501modedb[] = {
 	{NULL, 60,  720,  480,  37427, 88,   16, 13, 1,   72,  3,
 		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT, FB_VMODE_NONINTERLACED},
 };
+
+/* Memory bases for the SM501 MFD */
+extern unsigned char *sm50x_base_reg;
+extern unsigned char *sm50x_base_mem;
+
+/* SmRead8()
+ * 
+ *    Read the 8-bit value, to the 8-bit register location
+ *    specified by nOffset
+ *
+*/
+static inline unsigned long SmRead8(unsigned long nOffset)
+{
+    return readb(sm50x_base_reg + nOffset);
+}
+
+/* SmRead16()
+ * 
+ *    Read the 16-bit value, to the 16-bit register location
+ *    specified by nOffset
+ *
+*/
+static inline unsigned long SmRead16(unsigned long nOffset)
+{
+    return readw(sm50x_base_reg + nOffset);
+}
+
+/* SmRead32()
+ * 
+ *    Read the 32-bit value, to the 32-bit register location
+ *    specified by nOffset
+ *
+*/
+static inline unsigned long SmRead32(unsigned long nOffset)
+{
+    return readl(sm50x_base_reg + nOffset);
+}
+
+
+/* SmWrite8()
+ * 
+ *    Write the 8-bit value, to the 8-bit register location
+ *    specified by nOffset
+ *
+*/
+static inline void SmWrite8(unsigned long nOffset, unsigned long nData)
+{
+	writeb(nData,sm50x_base_reg + nOffset);
+}
+
+/* SmWrite16()
+ * 
+ *    Write the 16-bit value, to the 16-bit register location
+ *    specified by nOffset
+ *
+*/
+static inline void SmWrite16(unsigned long nOffset, unsigned long nData)
+{
+	writew(nData,sm50x_base_reg + nOffset);
+}
+
+/* SmWrite32()
+ * 
+ *    Write the 32-bit value, to the 32-bit register location
+ *    specified by nOffset
+ *
+*/
+static inline void SmWrite32(unsigned long nOffset, unsigned long nData)
+{
+	writel(nData,sm50x_base_reg + nOffset);
+}
+
+static inline void SmMemset(unsigned long nOffset, unsigned char val, int count)
+{
+	memset((void __force *) (sm50x_base_reg + nOffset), val, count);
+}
+
 #endif
