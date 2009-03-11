@@ -25,6 +25,9 @@ extern unsigned long cpu_clock_freq;
 /* IRQ-related */
 #define LS2F_IRQ_BASE 32
 
+/* the I/O space base */
+#define LS2F_REG_BASE	0x1fe00000ull
+
 /* register regions */
 #define LS2F_CONFIG_PHYS 0x1fe00100ull
 #define LS2F_CONFIG_SIZE 0x100
@@ -79,5 +82,8 @@ extern unsigned long cpu_clock_freq;
 #define ls2f_config_writel(reg, value) (ls2f_writel(value, core_config + (reg)))
 #define ls2f_config_readl(reg) (ls2f_readl(core_config + (reg)))
 
+
+
 /* access the PCI control space */
-#define PCIACCESS(x) (*(volatile u32 *)((char *)pcictrl_base + (x)))
+#define PCI_BASE (CKSEG1ADDR(LS2F_REG_BASE))
+#define PCIACCESS(x) (*(volatile u32 *)((char *)PCI_BASE + (x)))
