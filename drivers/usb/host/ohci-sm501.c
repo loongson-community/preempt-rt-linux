@@ -393,12 +393,15 @@ static irqreturn_t ohci_hcd_sm501_irq(struct usb_hcd *hcd)
 	irqreturn_t ret;
 
 // Check  interrupt status
-	if (TEST_FIELD(SmRead32(INTERRUPT_STATUS) ,INTERRUPT_STATUS_USB_HOST,NOT_ACTIVE) ){
+/*
+	if (TEST_FIELD(SmRead32(INTERRUPT_STATUS), INTERRUPT_STATUS_USB_HOST, 
+		NOT_ACTIVE) )
+	{
 		//SmWrite32(USB_HOST_HC_INTERRUPTSTATUS, 0xffffffff);
 		return IRQ_NONE;
 	}
-
-	*(volatile unsigned int *)(usb_video_buf);
+*/
+	/**(volatile unsigned int *)(usb_video_buf); */
 
 #ifdef DEBUG
 	//printk("SM501 irq....................................\n");

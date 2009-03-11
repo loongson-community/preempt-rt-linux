@@ -1072,7 +1072,7 @@ MODULE_LICENSE ("GPL");
 
 #ifdef CONFIG_MFD_SM501
 #include "ohci-sm501.c"
-#define SM501_OHCI_DRIVER	ohci_sm501_hc_driver
+#define SM501_OHCI_DRIVER	sm501usb_driver
 #endif
 
 #ifdef CONFIG_MFD_TC6393XB
@@ -1087,7 +1087,8 @@ MODULE_LICENSE ("GPL");
 	!defined(PS3_SYSTEM_BUS_DRIVER) && \
 	!defined(SM501_OHCI_DRIVER) && \
 	!defined(TMIO_OHCI_DRIVER) && \
-	!defined(SSB_OHCI_DRIVER)
+	!defined(SSB_OHCI_DRIVER) && \
+	!defined(SM501_OHCI_DRIVER)
 #error "missing bus glue for ohci-hcd"
 #endif
 
