@@ -29,9 +29,9 @@
 #include <linux/bootmem.h>
 #include <linux/init.h>
 #include <linux/irq.h>
+#include <linux/types.h>
 
 #include <asm/bootinfo.h>
-#include <asm/mc146818-time.h>
 #include <asm/time.h>
 #include <asm/wbflush.h>
 #include <asm/mips-boards/bonito64.h>
@@ -50,6 +50,8 @@ unsigned long bus_clock;
 unsigned int memsize;
 unsigned int highmemsize;
 
+EXPORT_SYMBOL_GPL(cpu_clock_freq);
+
 void *pcictrl_base;
 void *ddr_cont;
 void *core_config;
@@ -59,11 +61,6 @@ void __init plat_time_init(void)
 {
 	/* setup mips r4k timer */
 	mips_hpt_frequency = cpu_clock_freq / 2;
-}
-
-unsigned long read_persistent_clock(void)
-{
-	return mc146818_get_cmos_time();
 }
 
 void (*__wbflush)(void);
@@ -86,11 +83,12 @@ void __init plat_mem_setup(void)
 	uint64_t mask;
 
 	ioport_resource.start = 0;
-	ioport_resource.end = 0xffffffff;
+	ioport_resource.end = 0xfffffffful;
 	iomem_resource.start = 0;
-	iomem_resource.end = 0xffffffff;
+	iomem_resource.end = 0xfffffffful;
 
-	set_io_port_base(ioremap_nocache(BONITO_PCIIO_BASE, BONITO_PCIIO_SIZE));
+	set_io_port_base(
+		(phys_t)ioremap_nocache(BONITO_PCIIO_BASE, BONITO_PCIIO_SIZE));
 
 	/* setup the various register windows */
 	ddr_cont = ioremap_nocache(LS2F_DDR_CONT_PHYS, LS2F_DDR_CONT_SIZE);
@@ -115,23 +113,13 @@ void __init plat_mem_setup(void)
 	mask = ~((1<<bit)-1);
 	mask |= 0xffffffff00000000ull;
 
-/*	ls2f_addr_win_writell(0x80000000ull, LS2F_ADDRCONF_M0_WIN2_BASE);
+	ls2f_addr_win_writell(0x80000000ull, LS2F_ADDRCONF_M0_WIN2_BASE);
 	ls2f_addr_win_writell(mask, LS2F_ADDRCONF_M0_WIN2_SIZE);
-	ls2f_addr_win_writell(0x80000000ull, LS2F_ADDRCONF_M0_WIN2_MMAP); */
+	ls2f_addr_win_writell(0x80000000ull, LS2F_ADDRCONF_M0_WIN2_MMAP); 
 	printk("addr_win_config base = %16lx\n", (uint64_t)addr_win_config);
 
-	/* Fixme : magical constants again */
-
-	/* Base */
-	*(unsigned volatile long long *) 0x900000003ff00010 = 0x0000000080000000; 
-	/* Mask */
-	*(unsigned volatile long long *) 0x900000003ff00030 = 
-		0xffffffff00000000 | mask;
-	/* Map */
-	*(unsigned volatile long long *) 0x900000003ff00050 = 0x0000000080000000;
-
 	if (highmemsize > 0)
-		add_memory_region(0x90000000, highmemsize << 20, BOOT_MEM_RAM);
+		add_memory_region(LS2F_HIGHMEM_START, highmemsize << 20, BOOT_MEM_RAM);
 #endif
 
 #ifdef CONFIG_VT

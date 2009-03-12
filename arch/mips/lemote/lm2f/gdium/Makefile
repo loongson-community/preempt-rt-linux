@@ -2,7 +2,7 @@
 # Makefile for the Gdium-specific kernel support
 #
 
-obj-y += irq.o reset.o setup.o platform.o serial.o
+obj-y += irq.o reset.o platform.o serial.o
 
 obj-$(CONFIG_MFD_SM501) += gclock.o
 

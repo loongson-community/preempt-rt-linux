@@ -12,16 +12,8 @@
 #include <linux/init.h>
 #include <linux/serial_8250.h>
 
-#ifdef CONFIG_HAVE_NB_SERIAL
-#ifdef CONFIG_LOONGSON2F_DEV_SM502
-//#define	NB_SERIAL_BASE		(CKSEG1ADDR(0x1fc80000) + 0x3f8)
-#define	NB_SERIAL_BASE		(CKSEG1ADDR(0x1ff00000) + 0x3f8)
-#define NB_SERIAL_IRQ		3
-#else
-#define	NB_SERIAL_BASE		(CKSEG1ADDR(0x1ff00000) + 0x3f8)
-#define NB_SERIAL_IRQ		5
-#endif
-#endif
+#define	SERIAL_BASE		(CKSEG1ADDR(0x1ff00000) + 0x3f8)
+#define SERIAL_IRQ		3
 
 #define PORT(base, int, base_baud)					\
 {									\
@@ -44,29 +36,21 @@
 }
 
 static struct plat_serial8250_port uart8250_data[] = {
-#if defined(CONFIG_HAVE_NB_SERIAL)
-	PORT_M(NB_SERIAL_BASE, MIPS_CPU_IRQ_BASE + NB_SERIAL_IRQ, (1843200 / 16*2)),
-#endif
+	PORT_M(SERIAL_BASE, MIPS_CPU_IRQ_BASE + SERIAL_IRQ, (1843200 / 16*2)),
 	PORT(0x3F8, 4, 1843200),
 	PORT(0x2F8, 3, 1843200),
 	{ },
 };
 
 static struct platform_device uart8250_device = {
-	.name			= "serial8250",
+	.name		= "serial8250",
 	.id			= PLAT8250_DEV_PLATFORM,
-	.dev			= {
+	.dev		= {
 		.platform_data	= uart8250_data,
 	},
 };
 
-static int __init uart8250_init(void)
+int __init uart8250_init(void)
 {
 	return platform_device_register(&uart8250_device);
 }
-
-module_init(uart8250_init);
-
-MODULE_AUTHOR("Ralf Baechle <ralf@linux-mips.org>");
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Lemute 8250 UART probe driver");

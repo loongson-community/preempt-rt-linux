@@ -59,19 +59,23 @@ extern unsigned long cpu_clock_freq;
 
 /* address window configuration registers of interes */
 #define LS2F_ADDRCONF_M0_WIN2_BASE 0x10
-#define LS2F_ADDRCONF_M0_WIN2_SIZE 0x20
+#define LS2F_ADDRCONF_M0_WIN2_SIZE 0x30
 #define LS2F_ADDRCONF_M0_WIN2_MMAP 0x50
+
+/* memory-related constants */
+#define LS2F_HIGHMEM_START 0x90000000ul
 
 /* accessor methods for the Loongson-2F CPU */
 #define ls2f_readb(addr) (readb(addr))
 #define ls2f_readw(addr) (readw(addr))
 #define ls2f_readl(addr) (readl(addr))
-#define ls2f_readll(addr) (*(volatile uint64_t *)(addr))
+#define ls2f_readll(addr) (*(volatile uint64_t *)((void *)addr))
 
 #define ls2f_writeb(value, addr) (writeb(value, addr))
 #define ls2f_writew(value, addr) (writew(value, addr))
 #define ls2f_writel(value, addr) (writel(value, addr))
-#define ls2f_writell(value, addr) (*(volatile uint64_t *)(addr) = (value))
+#define ls2f_writell(value, addr) (*(volatile uint64_t *)((void *)(addr)) \
+	= (value))
 
 /* accessor methods specific to address window configuration */
 #define ls2f_addr_win_writell(value, reg) (ls2f_writell(value, \
@@ -82,8 +86,6 @@ extern unsigned long cpu_clock_freq;
 #define ls2f_config_writel(reg, value) (ls2f_writel(value, core_config + (reg)))
 #define ls2f_config_readl(reg) (ls2f_readl(core_config + (reg)))
 
-
-
 /* access the PCI control space */
-#define PCI_BASE (CKSEG1ADDR(LS2F_REG_BASE))
+#define PCI_BASE (pcictrl_base) /* (CKSEG1ADDR(LS2F_REG_BASE)) */
 #define PCIACCESS(x) (*(volatile u32 *)((char *)PCI_BASE + (x)))

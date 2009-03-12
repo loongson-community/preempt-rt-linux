@@ -5,11 +5,25 @@
 #include <linux/i2c.h>
 #include <linux/i2c-gpio.h>
 
+#include <asm/mc146818-time.h>
+
+#include <stls2f.h>
+
 #define M41T83_REG_SQW	0x13
+
+#define GDIUM_GPIO_BASE 244
+#define GDIUM_V2_GPIO_BASE 192
+
+extern int uart8250_init(void);
 
 const char *get_system_type(void)
 {
-	return "gdium";
+	return "Emtec Gdium Liberty 1000";
+}
+
+unsigned long read_persistent_clock(void)
+{
+	return mc146818_get_cmos_time();
 }
 
 static struct i2c_board_info __initdata sm502dev_i2c_devices[] = {
@@ -61,11 +75,11 @@ static struct platform_device backlight = {
 /* bus 0 is the one for the ST7, DS75 etc... */
 static struct i2c_gpio_platform_data i2c_gpio0_data = {
 #if CONFIG_GDIUM_VERSION > 2
-	.sda_pin	= 224+13,
-	.scl_pin	= 224+6,
+	.sda_pin	= GDIUM_GPIO_BASE + 13,
+	.scl_pin	= GDIUM_GPIO_BASE + 6,
 #else
-        .sda_pin        = 192+15,
-	.scl_pin        = 192+14,
+	.sda_pin	 = GDIUM_V2_GPIO_BASE + 15,
+	.scl_pin	 = GDIUM_V2_GPIO_BASE + 14,
 #endif
 	.udelay		= 5,
 	.timeout	= HZ / 10,
@@ -74,17 +88,17 @@ static struct i2c_gpio_platform_data i2c_gpio0_data = {
 };
 
 static struct platform_device i2c_gpio0_device = {
-        .name           = "i2c-gpio",
-        .id             = 0,
-        .dev            = {
-                .platform_data  = &i2c_gpio0_data,
-        },
+		.name		   = "i2c-gpio",
+		.id			 = 0,
+		.dev			= {
+				.platform_data  = &i2c_gpio0_data,
+		},
 };
 
 /* bus 1 is for the CRT/VGA external screen */
 static struct i2c_gpio_platform_data i2c_gpio1_data = {
-        .sda_pin        = 224+10,
-	.scl_pin        = 224+9,
+	.sda_pin	= GDIUM_GPIO_BASE+10,
+	.scl_pin	= GDIUM_GPIO_BASE+9,
 	.udelay		= 5,
 	.timeout	= HZ / 10,
 	.sda_is_open_drain = 0,
@@ -92,11 +106,11 @@ static struct i2c_gpio_platform_data i2c_gpio1_data = {
 };
 
 static struct platform_device i2c_gpio1_device = {
-        .name           = "i2c-gpio",
-        .id             = 1,
-        .dev            = {
-                .platform_data  = &i2c_gpio1_data,
-        },
+		.name		   = "i2c-gpio",
+		.id			 = 1,
+		.dev			= {
+				.platform_data  = &i2c_gpio1_data,
+		},
 };
 
 static struct platform_device gdium_audio = {
@@ -113,19 +127,26 @@ static struct platform_device *devices[] __initdata = {
 
 static int __init sm502dev_platform_devices_setup(void)
 {
-    int ret;
+	int ret;
 	printk("Registering platform devices\n");
-	platform_add_devices(devices, ARRAY_SIZE(devices));
+	
+	ret = uart8250_init();
 
+	if (ret != 0) {
+		printk("Error while registering platform serial port: %d\n", ret);
+	}
+
+	platform_add_devices(devices, ARRAY_SIZE(devices));
+	
 	ret = i2c_register_board_info(0, sm502dev_i2c_devices,
 		ARRAY_SIZE(sm502dev_i2c_devices));
 
-    if (ret != 0) {
-        printk("Error while registering platform devices: %d\n", ret);
-        return ret;
-    }
+	if (ret != 0) {
+		printk("Error while registering platform devices: %d\n", ret);
+		return ret;
+	}
 
-    return 0;
+	return 0;
 }
 
 /*

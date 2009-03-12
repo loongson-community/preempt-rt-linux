@@ -15,8 +15,8 @@ int __uncached_access(struct file *file, unsigned long addr)
 		return 1;
 
 	/*
-	 * On the Lemote Loongson 2e system, the peripheral registers
-	 * reside between 0x1000:0000 and 0x2000:0000.
+	 * On the Loongson 2F SoC-based systems, the peripheral registers
+	 * reside between 0x10000000 and 0x80000000.
 	 */
 	return addr >= __pa(high_memory) ||
 			((addr >= 0x10000000) && (addr < 0x80000000));
