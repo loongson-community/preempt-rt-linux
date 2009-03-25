@@ -11,7 +11,7 @@
 
 #define M41T83_REG_SQW	0x13
 
-#define GDIUM_GPIO_BASE 244
+#define GDIUM_GPIO_BASE 224
 #define GDIUM_V2_GPIO_BASE 192
 
 const char *get_system_type(void)
