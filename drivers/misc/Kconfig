@@ -223,6 +223,17 @@ config DELL_LAPTOP
 	This driver adds support for rfkill and backlight control to Dell
 	laptops.
 
+config GDIUM_LAPTOP
+	tristate "Gdium Laptop Extras"
+	depends on EMTEC_GDIUM && POWER_SUPPLY && I2C && INPUT_POLLDEV
+	default n
+	---help---
+	This driver adds support for the ST7FOX microcontroller used to control
+	power management on the Emtec Gdium laptop. This gives battery support and
+	WLAN rfkill.
+
+	If you are unsure, say N.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 

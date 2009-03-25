@@ -19,4 +19,5 @@ obj-$(CONFIG_SGI_XP)		+= sgi-xp/
 obj-$(CONFIG_SGI_GRU)		+= sgi-gru/
 obj-$(CONFIG_HP_ILO)		+= hpilo.o
 obj-$(CONFIG_C2PORT)		+= c2port/
+obj-$(CONFIG_GDIUM_LAPTOP)  += gdium-laptop.o
 obj-y				+= eeprom/
