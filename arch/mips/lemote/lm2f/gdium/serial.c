@@ -37,8 +37,8 @@
 
 static struct plat_serial8250_port uart8250_data[] = {
 	PORT_M(SERIAL_BASE, MIPS_CPU_IRQ_BASE + SERIAL_IRQ, (1843200 / 16*2)),
-	PORT(0x3F8, 4, 1843200),
-	PORT(0x2F8, 3, 1843200),
+/*	PORT(0x3F8, 4, 1843200),
+	PORT(0x2F8, 3, 1843200), */
 	{ },
 };
 
@@ -54,3 +54,5 @@ int __init uart8250_init(void)
 {
 	return platform_device_register(&uart8250_device);
 }
+
+arch_initcall(uart8250_init);

@@ -116,7 +116,6 @@ void __init plat_mem_setup(void)
 	ls2f_addr_win_writell(0x80000000ull, LS2F_ADDRCONF_M0_WIN2_BASE);
 	ls2f_addr_win_writell(mask, LS2F_ADDRCONF_M0_WIN2_SIZE);
 	ls2f_addr_win_writell(0x80000000ull, LS2F_ADDRCONF_M0_WIN2_MMAP); 
-	printk("addr_win_config base = %16lx\n", (uint64_t)addr_win_config);
 
 	if (highmemsize > 0)
 		add_memory_region(LS2F_HIGHMEM_START, highmemsize << 20, BOOT_MEM_RAM);

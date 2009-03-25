@@ -154,6 +154,11 @@ static int __init pcibios_init(void)
 	pci_probe_only = 0;
 
 	ict_pcimap();
+	
+	loongson2f_pci_controller.io_map_base = 
+		(phys_t)ioremap_nocache(0x14000000ull, 0xC00000) ;
+		/* (phys_t)ioremap_nocache(BONITO_PCIIO_BASE, BONITO_PCIIO_SIZE); */
+
 	register_pci_controller(&loongson2f_pci_controller);
 
 	return 0;

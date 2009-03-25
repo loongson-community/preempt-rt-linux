@@ -14,8 +14,6 @@
 #define GDIUM_GPIO_BASE 244
 #define GDIUM_V2_GPIO_BASE 192
 
-extern int uart8250_init(void);
-
 const char *get_system_type(void)
 {
 	return "Emtec Gdium Liberty 1000";
@@ -130,12 +128,6 @@ static int __init sm502dev_platform_devices_setup(void)
 	int ret;
 	printk("Registering platform devices\n");
 	
-	ret = uart8250_init();
-
-	if (ret != 0) {
-		printk("Error while registering platform serial port: %d\n", ret);
-	}
-
 	platform_add_devices(devices, ARRAY_SIZE(devices));
 	
 	ret = i2c_register_board_info(0, sm502dev_i2c_devices,
