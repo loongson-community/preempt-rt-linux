@@ -52,7 +52,11 @@ static struct platform_device uart8250_device = {
 
 int __init uart8250_init(void)
 {
+#ifdef CONFIG_GDIUM_UART
 	return platform_device_register(&uart8250_device);
+#else
+	return 0;
+#endif
 }
 
 arch_initcall(uart8250_init);

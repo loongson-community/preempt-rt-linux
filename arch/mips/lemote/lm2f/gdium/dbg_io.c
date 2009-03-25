@@ -25,6 +25,7 @@
 
 void prom_putchar(char c)
 {
+#ifdef CONFIG_GDIUM_UART
 	uint32_t timeout;
 
 	for (timeout = 1024;
@@ -32,4 +33,5 @@ void prom_putchar(char c)
 		timeout--);
 
 	writeb(c, UART_BASE + UART_TX);
+#endif
 }
