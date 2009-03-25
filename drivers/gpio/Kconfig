@@ -176,4 +176,16 @@ config GPIO_MCP23S08
 	  SPI driver for Microchip MCP23S08 I/O expander.  This provides
 	  a GPIO interface supporting inputs and outputs.
 
+comment "Multifunction Device GPIO expanders:"
+
+config GPIO_SM501
+	tristate "SM501 GPIO support"
+	depends on MFD_SM501
+	help
+	  The SM501 is a multi-function device used in a number of embedded
+	  applications, on a single chip. Devices that require this include
+	  the Emtec Gdium netbook.
+
+	  Say N here if unsure.
+
 endif
