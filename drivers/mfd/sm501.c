@@ -36,6 +36,7 @@
 #include <asm/uaccess.h>
 
 unsigned char __iomem *sm50x_base_reg = NULL;
+EXPORT_SYMBOL_GPL(sm50x_base_reg);
 unsigned char __iomem *sm50x_base_mem = NULL;
 resource_size_t sm50x_mem_size = 0;
 EXPORT_SYMBOL_GPL(sm50x_mem_size);
