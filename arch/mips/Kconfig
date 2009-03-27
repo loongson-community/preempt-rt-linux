@@ -2149,6 +2149,10 @@ config ARCH_SUSPEND_POSSIBLE
 	def_bool y
 	depends on !SMP
 
+config ARCH_HIBERNATION_POSSIBLE
+	def_bool y
+	depends on STLS2F_SYSTEMS && EMTEC_GDIUM
+
 source "kernel/power/Kconfig"
 
 endmenu

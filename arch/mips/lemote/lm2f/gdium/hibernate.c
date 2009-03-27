@@ -65,15 +65,25 @@ static void ls2f_restore_cleanup(void)
 {
 }
 
+static void ls2f_end(void)
+{
+}
+
+static void ls2f_recover(void)
+{
+}
+
 static struct platform_hibernation_ops ls2f_hibernation_ops = {
-	.start = ls2f_start,
+	.begin = ls2f_start,
+	.end = ls2f_end,
 	.pre_snapshot = ls2f_pre_snapshot,
 	.finish = ls2f_finish,
 	.prepare = ls2f_prepare,
 	.enter = ls2f_enter,
 	.leave = ls2f_leave,
 	.pre_restore = ls2f_pre_restore,
-	.restore_cleanup = ls2f_restore_cleanup
+	.restore_cleanup = ls2f_restore_cleanup,
+	.recover = ls2f_recover
 };
 
 static int ls2f_pm_notifier(struct notifier_block *nb, unsigned long val,

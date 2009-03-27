@@ -39,7 +39,9 @@ config GDIUM_UART
 	depends on EMTEC_GDIUM
 	default n
 	help
-	  Enables the Gdium UART for later debugging output.
+	  Enables the Gdium UART for later debugging output. Note that if your
+	  Gdium does not have the serial port hardware installed, it will result
+	  in a lockup during boot.
 
 endchoice
 

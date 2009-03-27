@@ -92,4 +92,6 @@ obj-$(CONFIG_HAVE_STD_PC_SERIAL_PORT)	+= 8250-platform.o
 
 obj-$(CONFIG_CPUFREQ) += clock.o
 
+obj-$(CONFIG_HIBERNATION) += suspend.o hibernate.o
+
 EXTRA_CFLAGS += -Werror
