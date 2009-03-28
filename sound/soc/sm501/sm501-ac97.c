@@ -456,6 +456,11 @@ static void snd_sm501_ac97_remove(struct platform_device *pdev,
 //	platform_set_drvdata(pdev, NULL);
 }
 
+static struct snd_soc_dai_ops sm501_ac97_dai_ops = {
+	.hw_params = snd_sm501_ac97_hw_params,
+	.prepare = snd_sm501_ac97_prepare,
+};
+
 struct snd_soc_dai sm501_ac97_dai[] = {{
 	.name = DRV_NAME,
 	.id = 0,
@@ -475,15 +480,8 @@ struct snd_soc_dai sm501_ac97_dai[] = {{
 		.channels_max = 2,
 		.rates = SNDRV_PCM_RATE_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,},
-	.ops = {
-		.hw_params = snd_sm501_ac97_hw_params,
-		.prepare   = snd_sm501_ac97_prepare,
-	},
+	.ops = &sm501_ac97_dai_ops,
 },
-#if 0
-#warning Put mic here
-{}
-#endif
 };
 EXPORT_SYMBOL_GPL(sm501_ac97_dai);
 
