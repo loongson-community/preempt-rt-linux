@@ -25,13 +25,11 @@
 
 void prom_putchar(char c)
 {
-#ifdef CONFIG_GDIUM_UART
 	uint32_t timeout;
 
 	for (timeout = 1024;
-		!(readb(UART_BASE + UART_LSR) & UART_LSR_THRE) && timeout >= 0;
+		!(readb(UART_BASE + UART_LSR) & UART_LSR_THRE) && timeout > 0;
 		timeout--);
 
 	writeb(c, UART_BASE + UART_TX);
-#endif
 }
