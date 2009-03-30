@@ -10,3 +10,4 @@ obj-$(CONFIG_EARLY_PRINTK) += dbg_io.o
 
 obj-$(CONFIG_HIBERNATION) += hibernate.o
 obj-$(CONFIG_SUSPEND) += suspend.o
+obj-$(CONFIG_GDIUM_PMON) += mtd.o

@@ -39,9 +39,15 @@ config GDIUM_UART
 	depends on EMTEC_GDIUM
 	default n
 	help
-	  Enables the Gdium UART for later debugging output. Note that if your
-	  Gdium does not have the serial port hardware installed, it will result
-	  in a lockup during boot.
+	  If your Gdium has UART hardware installed, say y here. Otherwise, say n.
+
+config GDIUM_PMON
+	tristate "Register Gdium PMON MTD Partitions"
+	depends on EMTEC_GDIUM
+	default y
+	help
+	  Enables the MTD mapping in order to make it possible to upgrade the Emtec
+	  Gdium's firmware from Linux. If unsure, say y.
 
 endchoice
 
