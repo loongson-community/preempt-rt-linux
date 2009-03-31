@@ -525,15 +525,7 @@ static int gdium_battery_get_props(struct power_supply *psy,
 			ret = 0;
 			break;
 		case POWER_SUPPLY_PROP_PRESENT:
-#if CONFIG_GDIUM_VERSION > 2
 			val->intval = status & EC_STATUS_BATID ? 1 : 0;
-#else
-			ret = data->battery_level;
-			if (ret > BAT_VOLT_PRESENT)
-				val->intval = 1;
-			else
-				val->intval = 0;
-#endif
 			ret = 0;
 			break;
 		case POWER_SUPPLY_PROP_CAPACITY:
@@ -598,11 +590,8 @@ static void gdium_laptop_battery_work(struct work_struct *work)
 	 * - ac adapter plugged in
 	 * - battery not fully charged
 	 */
-#if CONFIG_GDIUM_VERSION > 2
 	present = (data->status & EC_STATUS_BATID) ? 1 : 0;
-#else
-	present = (ret > BAT_VOLT_PRESENT) ? 1 : 0;
-#endif
+
 	if (present)
 		if (data->status & EC_STATUS_ADAPT)
 			data->battery_level = (unsigned int)ret - BAT_READ_ERROR;
