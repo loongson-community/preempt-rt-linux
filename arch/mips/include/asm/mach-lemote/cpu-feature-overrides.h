@@ -8,9 +8,6 @@
 #ifndef __ASM_MACH_LEMOTE_CPU_FEATURE_OVERRIDES_H
 #define __ASM_MACH_LEMOTE_CPU_FEATURE_OVERRIDES_H
 
-#include <linux/types.h>
-#include <asm/mipsregs.h>
-
 #define cpu_dcache_line_size()	32
 #define cpu_icache_line_size()	32
 
