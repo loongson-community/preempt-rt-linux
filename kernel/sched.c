@@ -3190,7 +3190,7 @@ static int move_one_task(struct rq *this_rq, int this_cpu, struct rq *busiest,
 	return 0;
 }
 /********** Helpers for find_busiest_group ************************/
-/**
+/*
  * sd_lb_stats - Structure to store the statistics of a sched_domain
  * 		during load balancing.
  */
@@ -3222,7 +3222,7 @@ struct sd_lb_stats {
 #endif
 };
 
-/**
+/*
  * sg_lb_stats - stats of a sched_group required for load_balancing
  */
 struct sg_lb_stats {
@@ -3360,15 +3360,16 @@ static inline void update_sd_power_savings_stats(struct sched_group *group,
 }
 
 /**
- * check_power_save_busiest_group - Check if we have potential to perform
- *	some power-savings balance. If yes, set the busiest group to be
- *	the least loaded group in the sched_domain, so that it's CPUs can
- *	be put to idle.
- *
+ * check_power_save_busiest_group - see if there is potential for some power-savings balance
  * @sds: Variable containing the statistics of the sched_domain
  *	under consideration.
  * @this_cpu: Cpu at which we're currently performing load-balancing.
  * @imbalance: Variable to store the imbalance.
+ *
+ * Description:
+ * Check if we have potential to perform some power-savings balance.
+ * If yes, set the busiest group to be the least loaded group in the
+ * sched_domain, so that it's CPUs can be put to idle.
  *
  * Returns 1 if there is potential to perform power-savings balance.
  * Else returns 0.
@@ -6342,12 +6343,7 @@ void sched_show_task(struct task_struct *p)
 		printk(KERN_CONT " %016lx ", thread_saved_pc(p));
 #endif
 #ifdef CONFIG_DEBUG_STACK_USAGE
-	{
-		unsigned long *n = end_of_stack(p);
-		while (!*n)
-			n++;
-		free = (unsigned long)n - (unsigned long)end_of_stack(p);
-	}
+	free = stack_not_used(p);
 #endif
 	printk(KERN_CONT "%5lu %5d %6d\n", free,
 		task_pid_nr(p), task_pid_nr(p->real_parent));
@@ -9892,7 +9888,7 @@ cpuacct_destroy(struct cgroup_subsys *ss, struct cgroup *cgrp)
 
 static u64 cpuacct_cpuusage_read(struct cpuacct *ca, int cpu)
 {
-	u64 *cpuusage = percpu_ptr(ca->cpuusage, cpu);
+	u64 *cpuusage = per_cpu_ptr(ca->cpuusage, cpu);
 	u64 data;
 
 #ifndef CONFIG_64BIT
@@ -9911,7 +9907,7 @@ static u64 cpuacct_cpuusage_read(struct cpuacct *ca, int cpu)
 
 static void cpuacct_cpuusage_write(struct cpuacct *ca, int cpu, u64 val)
 {
-	u64 *cpuusage = percpu_ptr(ca->cpuusage, cpu);
+	u64 *cpuusage = per_cpu_ptr(ca->cpuusage, cpu);
 
 #ifndef CONFIG_64BIT
 	/*
@@ -10007,7 +10003,7 @@ static void cpuacct_charge(struct task_struct *tsk, u64 cputime)
 	ca = task_ca(tsk);
 
 	for (; ca; ca = ca->parent) {
-		u64 *cpuusage = percpu_ptr(ca->cpuusage, cpu);
+		u64 *cpuusage = per_cpu_ptr(ca->cpuusage, cpu);
 		*cpuusage += cputime;
 	}
 }
