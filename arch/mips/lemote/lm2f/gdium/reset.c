@@ -13,7 +13,6 @@
 #include <asm/reboot.h>
 #include <asm/mips-boards/bonito64.h>
 
-
 static void loongson2f_restart(char *command)
 {
 	BONITO_BONGENCFG &= ~BONITO_BONGENCFG_CPUSELFRESET;
@@ -21,8 +20,9 @@ static void loongson2f_restart(char *command)
 
 	BONITO_GPIOIE &= ~(1<<2);
 	BONITO_GPIODATA &= ~(1<<2);
-
-	__asm__ __volatile__("jr\t%0"::"r"(CKSEG1ADDR(BONITO_BOOT_BASE)));
+	
+	/* jump to system reset vector */
+	((void (*)(void))(CKSEG1ADDR(BONITO_BOOT_BASE)))();
 }
 
 static void loongson2f_halt(void)
