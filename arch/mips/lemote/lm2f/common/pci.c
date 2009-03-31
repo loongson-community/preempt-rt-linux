@@ -31,11 +31,7 @@
 #include <linux/init.h>
 #include <asm/mips-boards/bonito64.h>
 
-#ifdef CONFIG_LOONGSON2F_PCI_HIGHMEM
 static int pci_highmem = 1;
-#else
-static int pci_highmem = 0;
-#endif
 
 extern struct pci_ops loongson2f_pci_ops;
 
