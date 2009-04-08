@@ -1876,8 +1876,10 @@ static int sm501fb_init_fb(struct fb_info *fb,
 	}
 	
 	/* initialise and set the palette */
-	fb_alloc_cmap(&fb->cmap, NR_PALETTE, 0);
-//	sm501fb_cmap_swap(&fb->cmap, fb);
+	if (fb_alloc_cmap(&fb->cmap, NR_PALETTE, 0)) {
+		dev_err(info->dev, "failed to allocate cmap memory\n");
+		return -ENOMEM;
+	}
 	fb_set_cmap(&fb->cmap, fb);
 
 	ret = (fb->fbops->fb_check_var)(&fb->var, fb);
