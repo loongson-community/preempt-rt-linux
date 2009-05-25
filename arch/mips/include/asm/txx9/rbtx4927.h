@@ -87,6 +87,6 @@
 void rbtx4927_prom_init(void);
 void rbtx4927_irq_setup(void);
 struct pci_dev;
-int rbtx4927_pci_map_irq(const struct pci_dev *dev, u8 slot, u8 pin);
+int rbtx4927_pci_map_irq(struct pci_dev *dev, u8 slot, u8 pin);
 
 #endif /* __ASM_TXX9_RBTX4927_H */

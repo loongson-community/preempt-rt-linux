@@ -140,6 +140,6 @@
 void rbtx4938_prom_init(void);
 void rbtx4938_irq_setup(void);
 struct pci_dev;
-int rbtx4938_pci_map_irq(const struct pci_dev *dev, u8 slot, u8 pin);
+int rbtx4938_pci_map_irq(struct pci_dev *dev, u8 slot, u8 pin);
 
 #endif /* __ASM_TXX9_RBTX4938_H */

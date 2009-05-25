@@ -37,7 +37,7 @@ struct txx9_board_vec {
 	void (*arch_init)(void);
 	void (*device_init)(void);
 #ifdef CONFIG_PCI
-	int (*pci_map_irq)(const struct pci_dev *dev, u8 slot, u8 pin);
+	int (*pci_map_irq)(struct pci_dev *dev, u8 slot, u8 pin);
 #endif
 };
 extern struct txx9_board_vec *txx9_board_vec;
