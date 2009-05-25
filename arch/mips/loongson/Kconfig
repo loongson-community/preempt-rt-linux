@@ -114,3 +114,15 @@ config CS5536_UDC
 
 config SYS_HAS_MACH_PROM_INIT_CMDLINE
 	bool
+
+config UCA_SIZE
+	hex "Uncache Accelerated Region size"
+	depends on CPU_LOONGSON2F
+	default 0x400000 if LEMOTE_YEELOONG2F
+	default 0x2000000 if LEMOTE_FULOONG2F
+	help
+	  Uncached Acceleration(UCA) can greatly improve video performance.
+	  Normally the Video memory can be accessed in Uncached Accelerated mode,
+	  other peripheral spaces not.
+
+	  Specify a zeroed size to disable this feature.
