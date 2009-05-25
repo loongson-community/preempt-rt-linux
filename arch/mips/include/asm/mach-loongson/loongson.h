@@ -51,6 +51,13 @@ extern void mach_prepare_shutdown(void);
 		__asm__ __volatile__(""); \
 })
 
+/* loongson-specific cpu frequency relative stuff */
+#ifdef CONFIG_LOONGSON2F_CPU_FREQ
+#include <linux/cpufreq.h>
+extern void loongson2f_cpu_wait(void);
+extern struct cpufreq_frequency_table loongson2f_clockmod_table[];
+#endif
+
 #define LOONGSON_REG(x) \
 	(*(u32 *)((char *)CKSEG1ADDR(LOONGSON_REG_BASE) + (x)))
 

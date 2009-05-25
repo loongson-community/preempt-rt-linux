@@ -24,6 +24,12 @@ obj-$(CONFIG_RTC_DRV_CMOS) += rtc.o
 obj-$(CONFIG_CS5536) += cs5536/
 
 #
+# Enable fuloong(2f) and yeeloong(2f) cpu frequency scaling support
+# This is based on CS5536 mfgpt timer
+#
+obj-$(CONFIG_LOONGSON2F_CPU_FREQ) += clock.o
+
+#
 # Enable serial port
 #
 obj-$(CONFIG_SERIAL_8250) += serial.o
