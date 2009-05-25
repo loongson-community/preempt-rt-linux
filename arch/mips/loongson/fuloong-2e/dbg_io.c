@@ -126,7 +126,8 @@ u8 getDebugChar(void)
 			  UART16550_PARITY_NONE, UART16550_STOP_1BIT);
 	}
 
-	while ((UART16550_READ(OFS_LINE_STATUS) & 0x1) == 0) ;
+	while ((UART16550_READ(OFS_LINE_STATUS) & 0x1) == 0)
+		;
 	return UART16550_READ(OFS_RCV_BUFFER);
 }
 
@@ -140,7 +141,13 @@ int putDebugChar(u8 byte)
 		   UART16550_PARITY_NONE, UART16550_STOP_1BIT); */
 	}
 
-	while ((UART16550_READ(OFS_LINE_STATUS) & 0x20) == 0) ;
+	while ((UART16550_READ(OFS_LINE_STATUS) & 0x20) == 0)
+		;
 	UART16550_WRITE(OFS_SEND_BUFFER, byte);
 	return 1;
+}
+
+void prom_putchar(char c)
+{
+	putDebugChar(c);
 }

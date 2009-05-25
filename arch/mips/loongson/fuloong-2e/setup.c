@@ -32,21 +32,19 @@
 
 #include <asm/bootinfo.h>
 #include <asm/mc146818-time.h>
-#include <asm/time.h>
 #include <asm/wbflush.h>
-#include <asm/mach-lemote/pci.h>
+#include <asm/time.h>
+
+#include <loongson.h>
+#include <pci.h>
 
 #ifdef CONFIG_VT
 #include <linux/console.h>
 #include <linux/screen_info.h>
 #endif
 
-extern void mips_reboot_setup(void);
-
-unsigned long cpu_clock_freq;
-unsigned long bus_clock;
-unsigned int memsize;
-unsigned int highmemsize = 0;
+unsigned long cpu_clock_freq, bus_clock;
+unsigned long memsize, highmemsize;
 
 void __init plat_time_init(void)
 {
@@ -77,15 +75,14 @@ void __init plat_mem_setup(void)
 {
 	set_io_port_base((unsigned long)ioremap(LOONGSON2E_IO_PORT_BASE,
 				IO_SPACE_LIMIT - LOONGSON2E_PCI_IO_START + 1));
-	mips_reboot_setup();
+	loongson_reboot_setup();
 
 	__wbflush = wbflush_loongson2e;
 
 	add_memory_region(0x0, (memsize << 20), BOOT_MEM_RAM);
 #ifdef CONFIG_64BIT
-	if (highmemsize > 0) {
+	if (highmemsize > 0)
 		add_memory_region(0x20000000, highmemsize << 20, BOOT_MEM_RAM);
-	}
 #endif
 
 #ifdef CONFIG_VT

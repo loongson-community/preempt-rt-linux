@@ -30,9 +30,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <asm/mips-boards/bonito64.h>
-#include <asm/mach-lemote/pci.h>
-
-extern struct pci_ops bonito64_pci_ops;
+#include <pci.h>
 
 static struct resource loongson2e_pci_mem_resource = {
 	.name   = "LOONGSON2E PCI MEM",

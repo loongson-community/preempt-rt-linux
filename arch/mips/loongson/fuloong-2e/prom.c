@@ -18,10 +18,7 @@
 #include <linux/bootmem.h>
 #include <asm/bootinfo.h>
 
-extern unsigned long bus_clock;
-extern unsigned long cpu_clock_freq;
-extern unsigned int memsize, highmemsize;
-extern int putDebugChar(unsigned char byte);
+#include <loongson.h>
 
 static int argc;
 /* pmon passes arguments in 32bit pointers */
@@ -30,7 +27,7 @@ static int *env;
 
 const char *get_system_type(void)
 {
-	return "lemote-fulong";
+	return "lemote-fuloong-2e";
 }
 
 void __init prom_init_cmdline(void)
@@ -50,6 +47,14 @@ void __init prom_init_cmdline(void)
 	}
 }
 
+#define parse_even_earlier(res, option, p)				\
+do {									\
+	if (strncmp(option, (char *)p, strlen(option)) == 0)		\
+			strict_strtol((char *)p + strlen(option"="),	\
+				    10, &res);				\
+} while (0)
+
+
 void __init prom_init(void)
 {
 	long l;
@@ -64,13 +69,6 @@ void __init prom_init(void)
 	if ((strstr(arcs_cmdline, "root=")) == NULL)
 		strcat(arcs_cmdline, " root=/dev/hda1");
 
-#define parse_even_earlier(res, option, p)				\
-do {									\
-	if (strncmp(option, (char *)p, strlen(option)) == 0)		\
-		res = simple_strtol((char *)p + strlen(option"="),	\
-				    NULL, 10);				\
-} while (0)
-
 	l = (long)*env;
 	while (l != 0) {
 		parse_even_earlier(bus_clock, "busclock", l);
@@ -83,15 +81,10 @@ do {									\
 	if (memsize == 0)
 		memsize = 256;
 
-	pr_info("busclock=%ld, cpuclock=%ld,memsize=%d,highmemsize=%d\n",
+	pr_info("busclock=%ld, cpuclock=%ld, memsize=%ld, highmemsize=%ld\n",
 	       bus_clock, cpu_clock_freq, memsize, highmemsize);
 }
 
 void __init prom_free_prom_memory(void)
 {
-}
-
-void prom_putchar(char c)
-{
-	putDebugChar(c);
 }

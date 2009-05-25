@@ -34,6 +34,7 @@
 #include <asm/mipsregs.h>
 #include <asm/mips-boards/bonito64.h>
 
+#include <loongson.h>
 
 /*
  * the first level int-handler will jump here if it is a bonito irq
@@ -67,27 +68,24 @@ static void i8259_irqdispatch(void)
 	int irq;
 
 	irq = i8259_irq();
-	if (irq >= 0) {
+	if (irq >= 0)
 		do_IRQ(irq);
-	} else {
+	else
 		spurious_interrupt();
-	}
-
 }
 
 asmlinkage void plat_irq_dispatch(void)
 {
 	unsigned int pending = read_c0_cause() & read_c0_status() & ST0_IM;
 
-	if (pending & CAUSEF_IP7) {
+	if (pending & CAUSEF_IP7)
 		do_IRQ(MIPS_CPU_IRQ_BASE + 7);
-	} else if (pending & CAUSEF_IP5) {
+	else if (pending & CAUSEF_IP5)
 		i8259_irqdispatch();
-	} else if (pending & CAUSEF_IP2) {
+	else if (pending & CAUSEF_IP2)
 		bonito_irqdispatch();
-	} else {
+	else
 		spurious_interrupt();
-	}
 }
 
 static struct irqaction cascade_irqaction = {
@@ -97,8 +95,6 @@ static struct irqaction cascade_irqaction = {
 
 void __init arch_init_irq(void)
 {
-	extern void bonito_irq_init(void);
-
 	/*
 	 * Clear all of the interrupts while we change the able around a bit.
 	 * int-handler is not on bootstrap

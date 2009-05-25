@@ -307,9 +307,9 @@ load-$(CONFIG_WR_PPMC)		+= 0xffffffff80100000
 #
 # lemote fulong mini-PC board
 #
-core-$(CONFIG_LEMOTE_FULONG) +=arch/mips/lemote/lm2e/
-load-$(CONFIG_LEMOTE_FULONG) +=0xffffffff80100000
-cflags-$(CONFIG_LEMOTE_FULONG) += -I$(srctree)/arch/mips/include/asm/mach-lemote
+core-$(CONFIG_LEMOTE_FULOONG2E) +=arch/mips/loongson/fuloong-2e/
+load-$(CONFIG_LEMOTE_FULOONG2E) +=0xffffffff80100000
+cflags-$(CONFIG_LEMOTE_FULOONG2E) += -I$(srctree)/arch/mips/include/asm/mach-loongson
 
 #
 # MIPS Malta board
