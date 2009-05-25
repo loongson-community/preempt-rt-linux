@@ -28,11 +28,12 @@
  *
  */
 
-#include <linux/io.h>
-#include <linux/init.h>
 #include <linux/types.h>
 
 #include <asm/serial.h>
+
+#include <loongson.h>
+#include <machine.h>
 
 #define         UART16550_BAUD_2400             2400
 #define         UART16550_BAUD_4800             4800
@@ -59,11 +60,8 @@
 /* ----------------------------------------------------- */
 
 /* === CONFIG === */
-#ifdef CONFIG_64BIT
-#define         BASE                    (0xffffffffbfd003f8)
-#else
-#define         BASE                    (0xbfd003f8)
-#endif
+
+#define		BASE			ioremap_nocache(LOONGSON_UART_BASE, 8)
 
 #define         MAX_BAUD                BASE_BAUD
 /* === END OF CONFIG === */

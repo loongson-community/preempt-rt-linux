@@ -7,7 +7,9 @@
  * option) any later version.
  */
 
+#include <machine.h>
+
 const char *get_system_type(void)
 {
-	return "lemote-fuloong-2e";
+	return MACH_NAME;
 }

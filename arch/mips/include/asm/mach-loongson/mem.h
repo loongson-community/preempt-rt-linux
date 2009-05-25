@@ -1,0 +1,8 @@
+#ifndef __MEM_H
+#define __MEM_H
+
+#define LOONGSON_HIGHMEM_START	0x20000000
+#define LOONGSON_MMIO_MEM_START 0x10000000
+#define LOONGSON_MMIO_MEM_END	0x20000000
+
+#endif	/* !__MEM_H */

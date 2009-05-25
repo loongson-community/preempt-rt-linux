@@ -31,6 +31,7 @@
 #include <linux/interrupt.h>
 
 #include <loongson.h>
+#include <machine.h>
 
 static inline void bonito_irq_enable(unsigned int irq)
 {
@@ -64,5 +65,5 @@ void bonito_irq_init(void)
 	for (i = LOONGSON_IRQ_BASE; i < LOONGSON_IRQ_BASE + 32; i++)
 		set_irq_chip_and_handler(i, &bonito_irq_type, handle_level_irq);
 
-	setup_irq(LOONGSON_IRQ_BASE + 10, &dma_timeout_irqaction);
+	setup_irq(LOONGSON_DMATIMEOUT_IRQ, &dma_timeout_irqaction);
 }

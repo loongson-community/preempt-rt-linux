@@ -27,7 +27,10 @@ static void loongson_wbflush(void)
 	asm(".set\tpush\n\t"
 	    ".set\tnoreorder\n\t"
 	    ".set mips3\n\t"
-	    "sync\n\t" "nop\n\t" ".set\tpop\n\t" ".set mips0\n\t");
+	    "sync\n\t"
+	    "nop\n\t"
+	    ".set\tpop\n\t"
+	    ".set mips0\n\t");
 }
 
 void __init loongson_wbflush_setup(void)

@@ -31,6 +31,7 @@
 #include <asm/i8259.h>
 
 #include <loongson.h>
+#include <machine.h>
 
 /*
  * the first level int-handler will jump here if it is a bonito irq
@@ -75,7 +76,7 @@ asmlinkage void plat_irq_dispatch(void)
 	unsigned int pending = read_c0_cause() & read_c0_status() & ST0_IM;
 
 	if (pending & CAUSEF_IP7)
-		do_IRQ(MIPS_CPU_IRQ_BASE + 7);
+		do_IRQ(LOONGSON_TIMER_IRQ);
 	else if (pending & CAUSEF_IP5)
 		i8259_irqdispatch();
 	else if (pending & CAUSEF_IP2)
@@ -128,8 +129,8 @@ void __init arch_init_irq(void)
 	*/
 
 	/* bonito irq at IP2 */
-	setup_irq(MIPS_CPU_IRQ_BASE + 2, &cascade_irqaction);
+	setup_irq(LOONGSON_NORTH_BRIDGE_IRQ, &cascade_irqaction);
 	/* 8259 irq at IP5 */
-	setup_irq(MIPS_CPU_IRQ_BASE + 5, &cascade_irqaction);
+	setup_irq(LOONGSON_SOUTH_BRIDGE_IRQ, &cascade_irqaction);
 
 }

@@ -14,6 +14,9 @@
 #ifndef __LOONGSON_H
 #define __LOONGSON_H
 
+#include <linux/io.h>
+#include <linux/init.h>
+
 /* loongson internal northbridge initialization */
 extern void bonito_irq_init(void);
 
