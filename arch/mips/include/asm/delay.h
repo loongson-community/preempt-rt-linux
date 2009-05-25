@@ -7,6 +7,7 @@
  * Copyright (C) 1995 - 2000, 01, 03 by Ralf Baechle
  * Copyright (C) 1999, 2000 Silicon Graphics, Inc.
  * Copyright (C) 2007  Maciej W. Rozycki
+ * Copyright (C) 2009  Wu Zhangjin, wuzj@lemote.com
  */
 #ifndef _ASM_DELAY_H
 #define _ASM_DELAY_H
@@ -48,34 +49,17 @@ static inline void __delay(unsigned long loops)
 		: "0" (loops), "r" (1));
 }
 
-
 /*
- * Division by multiplication: you don't have to worry about
- * loss of precision.
+ * convert usecs to loops
  *
- * Use only for very small delays ( < 1 msec).  Should probably use a
- * lookup table, really, as the multiplications take much too long with
- * short delays.  This is a "reasonable" implementation, though (and the
- * first constant multiplications gets optimized away if the delay is
- * a constant)
+ * handle removal of 'h' constraint in GCC 4.4
  */
 
-static inline void __udelay(unsigned long usecs, unsigned long lpj)
+#ifndef GCC_NO_H_CONSTRAINT	/* gcc <= 4.3 */
+static inline unsigned long __usecs_to_loops(unsigned long usecs,
+		unsigned long lpj)
 {
 	unsigned long hi, lo;
-
-	/*
-	 * The rates of 128 is rounded wrongly by the catchall case
-	 * for 64-bit.  Excessive precission?  Probably ...
-	 */
-#if defined(CONFIG_64BIT) && (HZ == 128)
-	usecs *= 0x0008637bd05af6c7UL;		/* 2**64 / (1000000 / HZ) */
-#elif defined(CONFIG_64BIT)
-	usecs *= (0x8000000000000000UL / (500000 / HZ));
-#else /* 32-bit junk follows here */
-	usecs *= (unsigned long) (((0x8000000000000000ULL / (500000 / HZ)) +
-	                           0x80000000ULL) >> 32);
-#endif
 
 	if (sizeof(long) == 4)
 		__asm__("multu\t%2, %3"
@@ -93,7 +77,43 @@ static inline void __udelay(unsigned long usecs, unsigned long lpj)
 		: "r" (usecs), "r" (lpj)
 		: GCC_REG_ACCUM);
 
-	__delay(usecs);
+	return usecs;
+}
+#else	/* GCC_NO_H_CONSTRAINT, gcc >= 4.4 */
+static inline unsigned long __usecs_to_loops(unsigned long usecs,
+		unsigned long lpj)
+{
+	return ((uintx_t)usecs * lpj) >> BITS_PER_LONG;
+}
+#endif
+
+/*
+ * Division by multiplication: you don't have to worry about
+ * loss of precision.
+ *
+ * Use only for very small delays ( < 1 msec).  Should probably use a
+ * lookup table, really, as the multiplications take much too long with
+ * short delays.  This is a "reasonable" implementation, though (and the
+ * first constant multiplications gets optimized away if the delay is
+ * a constant)
+ */
+
+static inline void __udelay(unsigned long usecs, unsigned long lpj)
+{
+	/*
+	 * The rates of 128 is rounded wrongly by the catchall case
+	 * for 64-bit.  Excessive precission?  Probably ...
+	 */
+#if defined(CONFIG_64BIT) && (HZ == 128)
+	usecs *= 0x0008637bd05af6c7UL;		/* 2**64 / (1000000 / HZ) */
+#elif defined(CONFIG_64BIT)
+	usecs *= (0x8000000000000000UL / (500000 / HZ));
+#else /* 32-bit junk follows here */
+	usecs *= (unsigned long) (((0x8000000000000000ULL / (500000 / HZ)) +
+	                           0x80000000ULL) >> 32);
+#endif
+
+	__delay(__usecs_to_loops(usecs, lpj));
 }
 
 #define __udelay_val cpu_data[raw_smp_processor_id()].udelay_val
