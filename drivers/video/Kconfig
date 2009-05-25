@@ -1930,6 +1930,28 @@ config FB_S3C2410_DEBUG
 	  Turn on debugging messages. Note that you can set/unset at run time
 	  through sysfs
 
+config FB_SM7XX
+	tristate "Silicon Motion SM7XX Frame Buffer Support"
+	depends on FB
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+	help
+	  Frame Buffer driver for the Silicon Motion SM7XX serial graphic card.
+
+config FB_SM7XX_ACCEL
+	bool "Siliconmotion Acceleration functions (EXPERIMENTAL)"
+	depends on FB_SM7XX && EXPERIMENTAL
+	help
+	  This will compile the Trident frame buffer device with
+	  acceleration functions.
+
+config FB_SM7XX_DUALHEAD
+	bool "Siliconmotion dualhead support (EXPERIMENTAL)"
+	depends on FB_SM7XX && EXPERIMENTAL
+	help
+	  This will enable the dualhead support of SM7XX
+
 config FB_SM501
 	tristate "Silicon Motion SM501 framebuffer support"
 	depends on FB && MFD_SM501
