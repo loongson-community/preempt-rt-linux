@@ -40,6 +40,8 @@ void mach_irq_dispatch(unsigned int pending)
 {
 	if (pending & CAUSEF_IP7)
 		do_IRQ(LOONGSON_TIMER_IRQ);
+	else if (pending & CAUSEF_IP6)	/* perf counter loverflow */
+		do_IRQ(LOONGSON_PERFCNT_IRQ);
 	else if (pending & CAUSEF_IP5)
 		i8259_irqdispatch();
 	else if (pending & CAUSEF_IP2)
