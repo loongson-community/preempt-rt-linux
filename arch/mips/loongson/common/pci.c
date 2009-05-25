@@ -1,6 +1,4 @@
 /*
- * pci.c
- *
  * Copyright (C) 2007 Lemote, Inc. & Institute of Computing Technology
  * Author: Fuxin Zhang, zhangfx@lemote.com
  *
@@ -25,6 +23,7 @@
  *  675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
+
 #include <linux/pci.h>
 
 #include <loongson.h>
@@ -58,10 +57,10 @@ static void __init ict_pcimap(void)
 	 * local to PCI mapping for CPU accessing PCI space
 	 *
 	 * CPU address space [256M,448M] is window for accessing pci space
-	 * we set pcimap_lo[0,1,2] to map it to pci space[0M, 64M], [320M,448M]
+	 * we set pcimap_lo[0,1,2] to map it to pci space[0M,64M], [320M,448M]
 	 *
-	 * pcimap:  PCI_MAP2  PCI_Mem_Lo2 PCI_Mem_Lo1 PCI_Mem_Lo0
-	 *            [<2G]   [384M,448M] [320M,384M] [0M,64M]
+	 * pcimap: PCI_MAP2  PCI_Mem_Lo2 PCI_Mem_Lo1 PCI_Mem_Lo0
+	 *           [<2G]   [384M,448M] [320M,384M] [0M,64M]
 	 */
 	LOONGSON_PCIMAP = LOONGSON_PCIMAP_PCIMAP_2 |
 	    LOONGSON_PCIMAP_WIN(2, 0x18000000) |

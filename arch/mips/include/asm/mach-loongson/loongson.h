@@ -20,7 +20,7 @@
 /* loongson internal northbridge initialization */
 extern void bonito_irq_init(void);
 
-/* command line */
+/* command line arguments */
 extern unsigned long bus_clock, cpu_clock_freq;
 extern unsigned long memsize, highmemsize;
 
@@ -30,6 +30,18 @@ extern void loongson_reboot_setup(void);
 /* loongson-specific command line and memory initialization */
 extern void __init prom_init_memory(void);
 extern void __init prom_init_cmdline(void);
+
+/* irq operation functions */
+extern void bonito_irqdispatch(void);
+extern void i8259_irqdispatch(void);
+extern void __init bonito_irq_init(void);
+extern void __init set_irq_trigger_mode(void);
+extern int mach_i8259_irq(void);
+extern void mach_irq_dispatch(unsigned int pending);
+
+/* machine-specific reboot/halt operation */
+extern void mach_prepare_reboot(void);
+extern void mach_prepare_shutdown(void);
 
 #define LOONGSON_REG(x) \
 	(*(u32 *)((char *)CKSEG1ADDR(LOONGSON_REG_BASE) + (x)))

@@ -18,31 +18,22 @@
  * option) any later version.
  */
 
-#include <linux/bootmem.h>
-
 #include <asm/bootinfo.h>
 
-unsigned long bus_clock, cpu_clock_freq;
-unsigned long memsize, highmemsize;
+#include <loongson.h>
 
 int prom_argc;
 /* pmon passes arguments in 32bit pointers */
-int *_prom_argv, *_prom_envp;
-
-#define parse_even_earlier(res, option, p)				\
-do {									\
-	if (strncmp(option, (char *)p, strlen(option)) == 0)		\
-			strict_strtol((char *)p + strlen(option"="),	\
-				    10, &res);				\
-} while (0)
+int *_prom_argv;
 
 void __init prom_init_cmdline(void)
 {
 	int i;
 	long l;
+
+	/* firmware arguments are initialized in head.S */
 	prom_argc = fw_arg0;
 	_prom_argv = (int *)fw_arg1;
-	_prom_envp = (int *)fw_arg2;
 
 	/* arg[0] is "g", the rest is boot parameters */
 	arcs_cmdline[0] = '\0';
@@ -59,19 +50,4 @@ void __init prom_init_cmdline(void)
 		strcat(arcs_cmdline, " console=ttyS0,115200");
 	if ((strstr(arcs_cmdline, "root=")) == NULL)
 		strcat(arcs_cmdline, " root=/dev/hda1");
-
-	l = (long)*_prom_envp;
-	while (l != 0) {
-		parse_even_earlier(bus_clock, "busclock", l);
-		parse_even_earlier(cpu_clock_freq, "cpuclock", l);
-		parse_even_earlier(memsize, "memsize", l);
-		parse_even_earlier(highmemsize, "highmemsize", l);
-		_prom_envp++;
-		l = (long)*_prom_envp;
-	}
-	if (memsize == 0)
-		memsize = 256;
-
-	pr_info("busclock=%ld, cpuclock=%ld, memsize=%ld, highmemsize=%ld\n",
-	       bus_clock, cpu_clock_freq, memsize, highmemsize);
 }

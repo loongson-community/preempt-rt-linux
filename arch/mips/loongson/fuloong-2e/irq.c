@@ -24,57 +24,20 @@
  *
  */
 
-#include <linux/delay.h>
 #include <linux/interrupt.h>
 
-#include <asm/irq_cpu.h>
 #include <asm/i8259.h>
 
 #include <loongson.h>
 #include <machine.h>
 
-/*
- * the first level int-handler will jump here if it is a bonito irq
- */
-static void bonito_irqdispatch(void)
+int mach_i8259_irq(void)
 {
-	u32 int_status;
-	int i;
-
-	/* workaround the IO dma problem: let cpu looping to allow DMA finish */
-	int_status = LOONGSON_INTISR;
-	if (int_status & (1 << 10)) {
-		while (int_status & (1 << 10)) {
-			udelay(1);
-			int_status = LOONGSON_INTISR;
-		}
-	}
-
-	/* Get pending sources, masked by current enables */
-	int_status = LOONGSON_INTISR & LOONGSON_INTEN;
-
-	if (int_status != 0) {
-		i = __ffs(int_status);
-		int_status &= ~(1 << i);
-		do_IRQ(LOONGSON_IRQ_BASE + i);
-	}
+	return i8259_irq();
 }
 
-static void i8259_irqdispatch(void)
+void mach_irq_dispatch(unsigned int pending)
 {
-	int irq;
-
-	irq = i8259_irq();
-	if (irq >= 0)
-		do_IRQ(irq);
-	else
-		spurious_interrupt();
-}
-
-asmlinkage void plat_irq_dispatch(void)
-{
-	unsigned int pending = read_c0_cause() & read_c0_status() & ST0_IM;
-
 	if (pending & CAUSEF_IP7)
 		do_IRQ(LOONGSON_TIMER_IRQ);
 	else if (pending & CAUSEF_IP5)
@@ -85,52 +48,9 @@ asmlinkage void plat_irq_dispatch(void)
 		spurious_interrupt();
 }
 
-static struct irqaction cascade_irqaction = {
-	.handler = no_action,
-	.name = "cascade",
-};
-
-void __init arch_init_irq(void)
+void __init set_irq_trigger_mode(void)
 {
-	/*
-	 * Clear all of the interrupts while we change the able around a bit.
-	 * int-handler is not on bootstrap
-	 */
-	clear_c0_status(ST0_IM | ST0_BEV);
-	local_irq_disable();
-
 	/* most bonito irq should be level triggered */
 	LOONGSON_INTEDGE = LOONGSON_ICU_SYSTEMERR | LOONGSON_ICU_MASTERERR |
 		LOONGSON_ICU_RETRYERR | LOONGSON_ICU_MBOXES;
-	LOONGSON_INTSTEER = 0;
-
-	/*
-	 * Mask out all interrupt by writing "1" to all bit position in
-	 * the interrupt reset reg.
-	 */
-	LOONGSON_INTENCLR = ~0;
-
-	/* init all controller
-	 *   0-15         ------> i8259 interrupt
-	 *   16-23        ------> mips cpu interrupt
-	 *   32-63        ------> bonito irq
-	 */
-
-	/* Sets the first-level interrupt dispatcher. */
-	mips_cpu_irq_init();
-	init_i8259_irqs();
-	bonito_irq_init();
-
-	/*
-	printk("GPIODATA=%x, GPIOIE=%x\n", LOONGSON_GPIODATA, LOONGSON_GPIOIE);
-	printk("INTEN=%x, INTSET=%x, INTCLR=%x, INTISR=%x\n",
-			LOONGSON_INTEN, LOONGSON_INTENSET,
-			LOONGSON_INTENCLR, LOONGSON_INTISR);
-	*/
-
-	/* bonito irq at IP2 */
-	setup_irq(LOONGSON_NORTH_BRIDGE_IRQ, &cascade_irqaction);
-	/* 8259 irq at IP5 */
-	setup_irq(LOONGSON_SOUTH_BRIDGE_IRQ, &cascade_irqaction);
-
 }
