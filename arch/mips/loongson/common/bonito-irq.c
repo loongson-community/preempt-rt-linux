@@ -53,10 +53,13 @@ static struct irq_chip bonito_irq_type = {
 	.unmask	= bonito_irq_enable,
 };
 
+/* there is no need to handle dma timeout in loongson-2f based machines */
+#ifdef CONFIG_CPU_LOONGSON2E
 static struct irqaction dma_timeout_irqaction = {
 	.handler	= no_action,
 	.name		= "dma_timeout",
 };
+#endif
 
 void bonito_irq_init(void)
 {
@@ -65,5 +68,7 @@ void bonito_irq_init(void)
 	for (i = LOONGSON_IRQ_BASE; i < LOONGSON_IRQ_BASE + 32; i++)
 		set_irq_chip_and_handler(i, &bonito_irq_type, handle_level_irq);
 
+#ifdef CONFIG_CPU_LOONGSON2E
 	setup_irq(LOONGSON_DMATIMEOUT_IRQ, &dma_timeout_irqaction);
+#endif
 }

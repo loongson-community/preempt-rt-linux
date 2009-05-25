@@ -17,4 +17,10 @@ obj-$(CONFIG_EARLY_PRINTK) += early_printk.o
 #
 obj-$(CONFIG_RTC_DRV_CMOS) += rtc.o
 
+#
+# Enable CS5536 Virtual Support Module(VSM) for virtulize the PCI configure
+# space
+#
+obj-$(CONFIG_CS5536) += cs5536/
+
 EXTRA_CFLAGS += -Werror

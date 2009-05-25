@@ -288,7 +288,7 @@ extern unsigned long _loongson_addrwincfg_base;
 	s##_WIN##w##_BASE = (src); \
 	s##_WIN##w##_MMAP = (src) | ADDRWIN_MAP_DST_##d; \
 	s##_WIN##w##_MASK = ~(size-1); \
-} while (0);
+} while (0)
 
 #define LOONGSON_ADDRWIN_CPUTOPCI(win, src, dst, size) \
 	LOONGSON_ADDRWIN_CFG(CPU, PCI, win, src, dst, size)
