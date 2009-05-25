@@ -22,6 +22,17 @@
 
 #include <loongson.h>
 
+#if defined(CONFIG_CPU_LOONGSON2F) && defined(CONFIG_64BIT)
+unsigned long _loongson_addrwincfg_base;
+
+/* Loongson CPU address windows config space base address */
+static inline void set_loongson_addrwincfg_base(unsigned long base)
+{
+	*(unsigned long *)&_loongson_addrwincfg_base = base;
+	barrier();
+}
+#endif
+
 void __init prom_init(void)
 {
 	/* init mach type, does we need to init it?? */
@@ -30,6 +41,12 @@ void __init prom_init(void)
 	/* init several base address */
 	set_io_port_base((unsigned long)
 			 ioremap(LOONGSON_PCIIO_BASE, LOONGSON_PCIIO_SIZE));
+
+#if defined(CONFIG_CPU_LOONGSON2F) && defined(CONFIG_64BIT)
+	set_loongson_addrwincfg_base((unsigned long)
+				     ioremap(LOONGSON_ADDRWINCFG_BASE,
+					     LOONGSON_ADDRWINCFG_SIZE));
+#endif
 
 	prom_init_cmdline();
 	prom_init_env();
