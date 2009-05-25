@@ -21,6 +21,7 @@
 #include <asm/bootinfo.h>
 
 #include <loongson.h>
+#include <cmdline.h>
 
 int prom_argc;
 /* pmon passes arguments in 32bit pointers */
@@ -45,6 +46,9 @@ void __init prom_init_cmdline(void)
 		strcat(arcs_cmdline, ((char *)l));
 		strcat(arcs_cmdline, " ");
 	}
+
+	/* machine specific prom_init_cmdline */
+	mach_prom_init_cmdline();
 
 	if ((strstr(arcs_cmdline, "console=")) == NULL)
 		strcat(arcs_cmdline, " console=ttyS0,115200");

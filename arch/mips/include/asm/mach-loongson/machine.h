@@ -27,13 +27,40 @@
 #define LOONGSON_TIMER_IRQ        	(MIPS_CPU_IRQ_BASE + 7)
 #define LOONGSON_DMATIMEOUT_IRQ		(LOONGSON_IRQ_BASE + 10)
 
-#else /* CONFIG_LEMOTE_FULOONG2F */
+#elif defined(CONFIG_LEMOTE_FULOONG2F)
 
 #define MACH_NAME			"lemote-fuloong-2f"
 
 #define LOONGSON_UART_BASE		(LOONGSON_PCIIO_BASE + 0x2f8)
 #define LOONGSON_UART_BAUD		1843200
 #define LOONGSON_UART_IOTYPE		UPIO_PORT
+
+#else /* CONFIG_CPU_YEELOONG2F */
+
+#define MACH_NAME			"lemote-yeeloong(2f)"
+
+/* yeeloong use the CPU serial port of Loongson2F */
+#define LOONGSON_UART_BASE		(LOONGSON_LIO1_BASE + 0x3f8)
+#define	LOONGSON_UART_BAUD		3686400
+#define LOONGSON_UART_IOTYPE		UPIO_MEM
+
+/*
+ * The following registers are determined by the EC index configuration.
+ * 1, fill the PORT_HIGH as EC register high part.
+ * 2, fill the PORT_LOW as EC register low part.
+ * 3, fill the PORT_DATA as EC register write data or get the data from it.
+ */
+#define	EC_IO_PORT_HIGH	0x0381
+#define	EC_IO_PORT_LOW	0x0382
+#define	EC_IO_PORT_DATA	0x0383
+#define	REG_RESET_HIGH	0xF4	/* reset the machine auto-clear : rd/wr */
+#define REG_RESET_LOW	0xEC
+#define	BIT_RESET_ON	(1 << 0)
+
+#endif	/* !CONFIG_LEMOTE_FULOONG2E */
+
+/* fuloong2f and yeeloong2f have the same IRQ control interface */
+#if defined(CONFIG_LEMOTE_FULOONG2F) || defined(CONFIG_LEMOTE_YEELOONG2F)
 
 #define LOONGSON_TIMER_IRQ	(MIPS_CPU_IRQ_BASE + 7)	/* cpu timer */
 #define LOONGSON_PERFCNT_IRQ	(MIPS_CPU_IRQ_BASE + 6) /* cpu perf counter */
