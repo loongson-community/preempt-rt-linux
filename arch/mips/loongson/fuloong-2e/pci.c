@@ -25,32 +25,29 @@
  *  675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
-#include <linux/types.h>
 #include <linux/pci.h>
-#include <linux/kernel.h>
-#include <linux/init.h>
 
 #include <loongson.h>
 #include <pci.h>
 
-static struct resource loongson2e_pci_mem_resource = {
-	.name   = "LOONGSON2E PCI MEM",
-	.start  = LOONGSON2E_PCI_MEM_START,
-	.end    = LOONGSON2E_PCI_MEM_END,
+static struct resource loongson_pci_mem_resource = {
+	.name   = "LOONGSON PCI MEM",
+	.start  = LOONGSON_PCI_MEM_START,
+	.end    = LOONGSON_PCI_MEM_END,
 	.flags  = IORESOURCE_MEM,
 };
 
-static struct resource loongson2e_pci_io_resource = {
-	.name   = "LOONGSON2E PCI IO MEM",
-	.start  = LOONGSON2E_PCI_IO_START,
+static struct resource loongson_pci_io_resource = {
+	.name   = "LOONGSON PCI IO MEM",
+	.start  = LOONGSON_PCI_IO_START,
 	.end    = IO_SPACE_LIMIT,
 	.flags  = IORESOURCE_IO,
 };
 
-static struct pci_controller  loongson2e_pci_controller = {
+static struct pci_controller  loongson_pci_controller = {
 	.pci_ops        = &loongson_pci_ops,
-	.io_resource    = &loongson2e_pci_io_resource,
-	.mem_resource   = &loongson2e_pci_mem_resource,
+	.io_resource    = &loongson_pci_io_resource,
+	.mem_resource   = &loongson_pci_mem_resource,
 	.mem_offset     = 0x00000000UL,
 	.io_offset      = 0x00000000UL,
 };
@@ -83,12 +80,9 @@ static int __init pcibios_init(void)
 {
 	ict_pcimap();
 
-	loongson2e_pci_controller.io_map_base =
-	    (unsigned long) ioremap(LOONGSON2E_IO_PORT_BASE,
-				    loongson2e_pci_io_resource.end -
-				    loongson2e_pci_io_resource.start + 1);
+	loongson_pci_controller.io_map_base = mips_io_port_base;
 
-	register_pci_controller(&loongson2e_pci_controller);
+	register_pci_controller(&loongson_pci_controller);
 
 	return 0;
 }

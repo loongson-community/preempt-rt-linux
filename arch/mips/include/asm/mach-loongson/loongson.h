@@ -24,6 +24,10 @@ extern unsigned long memsize, highmemsize;
 /* loongson-based machines specific reboot setup */
 extern void loongson_reboot_setup(void);
 
+/* loongson-specific command line and memory initialization */
+extern void __init prom_init_memory(void);
+extern void __init prom_init_cmdline(void);
+
 #define LOONGSON_REG(x) \
 	(*(u32 *)((char *)CKSEG1ADDR(LOONGSON_REG_BASE) + (x)))
 #define LOONGSON_IRQ_BASE	32

@@ -27,15 +27,10 @@
  *  675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
-#include <linux/errno.h>
-#include <linux/init.h>
-#include <linux/io.h>
-#include <linux/types.h>
+
 #include <linux/interrupt.h>
-#include <linux/irq.h>
 
 #include <loongson.h>
-
 
 static inline void bonito_irq_enable(unsigned int irq)
 {

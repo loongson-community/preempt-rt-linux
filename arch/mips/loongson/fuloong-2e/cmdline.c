@@ -9,43 +9,25 @@
  * Copyright (C) 2007 Lemote Inc. & Insititute of Computing Technology
  * Author: Fuxin Zhang, zhangfx@lemote.com
  *
+ * Copyright (C) 2009 Lemote Inc. & Insititute of Computing Technology
+ * Author: Wu Zhangjin, wuzj@lemote.com
+ *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
  * Free Software Foundation;  either version 2 of the  License, or (at your
  * option) any later version.
  */
-#include <linux/init.h>
+
 #include <linux/bootmem.h>
+
 #include <asm/bootinfo.h>
 
-#include <loongson.h>
+unsigned long bus_clock, cpu_clock_freq;
+unsigned long memsize, highmemsize;
 
-static int argc;
+int prom_argc;
 /* pmon passes arguments in 32bit pointers */
-static int *arg;
-static int *env;
-
-const char *get_system_type(void)
-{
-	return "lemote-fuloong-2e";
-}
-
-void __init prom_init_cmdline(void)
-{
-	int i;
-	long l;
-
-	/* arg[0] is "g", the rest is boot parameters */
-	arcs_cmdline[0] = '\0';
-	for (i = 1; i < argc; i++) {
-		l = (long)arg[i];
-		if (strlen(arcs_cmdline) + strlen(((char *)l) + 1)
-		    >= sizeof(arcs_cmdline))
-			break;
-		strcat(arcs_cmdline, ((char *)l));
-		strcat(arcs_cmdline, " ");
-	}
-}
+int *_prom_argv, *_prom_envp;
 
 #define parse_even_earlier(res, option, p)				\
 do {									\
@@ -54,37 +36,42 @@ do {									\
 				    10, &res);				\
 } while (0)
 
-
-void __init prom_init(void)
+void __init prom_init_cmdline(void)
 {
+	int i;
 	long l;
-	argc = fw_arg0;
-	arg = (int *)fw_arg1;
-	env = (int *)fw_arg2;
+	prom_argc = fw_arg0;
+	_prom_argv = (int *)fw_arg1;
+	_prom_envp = (int *)fw_arg2;
 
-	prom_init_cmdline();
+	/* arg[0] is "g", the rest is boot parameters */
+	arcs_cmdline[0] = '\0';
+	for (i = 1; i < prom_argc; i++) {
+		l = (long)_prom_argv[i];
+		if (strlen(arcs_cmdline) + strlen(((char *)l) + 1)
+		    >= sizeof(arcs_cmdline))
+			break;
+		strcat(arcs_cmdline, ((char *)l));
+		strcat(arcs_cmdline, " ");
+	}
 
 	if ((strstr(arcs_cmdline, "console=")) == NULL)
 		strcat(arcs_cmdline, " console=ttyS0,115200");
 	if ((strstr(arcs_cmdline, "root=")) == NULL)
 		strcat(arcs_cmdline, " root=/dev/hda1");
 
-	l = (long)*env;
+	l = (long)*_prom_envp;
 	while (l != 0) {
 		parse_even_earlier(bus_clock, "busclock", l);
 		parse_even_earlier(cpu_clock_freq, "cpuclock", l);
 		parse_even_earlier(memsize, "memsize", l);
 		parse_even_earlier(highmemsize, "highmemsize", l);
-		env++;
-		l = (long)*env;
+		_prom_envp++;
+		l = (long)*_prom_envp;
 	}
 	if (memsize == 0)
 		memsize = 256;
 
 	pr_info("busclock=%ld, cpuclock=%ld, memsize=%ld, highmemsize=%ld\n",
 	       bus_clock, cpu_clock_freq, memsize, highmemsize);
-}
-
-void __init prom_free_prom_memory(void)
-{
 }

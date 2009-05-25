@@ -23,15 +23,12 @@
  *  675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
+
 #include <linux/delay.h>
-#include <linux/io.h>
-#include <linux/init.h>
 #include <linux/interrupt.h>
-#include <linux/irq.h>
 
 #include <asm/irq_cpu.h>
 #include <asm/i8259.h>
-#include <asm/mipsregs.h>
 
 #include <loongson.h>
 
