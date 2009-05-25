@@ -32,7 +32,6 @@
 #include <asm/irq_cpu.h>
 #include <asm/i8259.h>
 #include <asm/mipsregs.h>
-#include <asm/mips-boards/bonito64.h>
 
 #include <loongson.h>
 
@@ -45,21 +44,21 @@ static void bonito_irqdispatch(void)
 	int i;
 
 	/* workaround the IO dma problem: let cpu looping to allow DMA finish */
-	int_status = BONITO_INTISR;
+	int_status = LOONGSON_INTISR;
 	if (int_status & (1 << 10)) {
 		while (int_status & (1 << 10)) {
 			udelay(1);
-			int_status = BONITO_INTISR;
+			int_status = LOONGSON_INTISR;
 		}
 	}
 
 	/* Get pending sources, masked by current enables */
-	int_status = BONITO_INTISR & BONITO_INTEN;
+	int_status = LOONGSON_INTISR & LOONGSON_INTEN;
 
 	if (int_status != 0) {
 		i = __ffs(int_status);
 		int_status &= ~(1 << i);
-		do_IRQ(BONITO_IRQ_BASE + i);
+		do_IRQ(LOONGSON_IRQ_BASE + i);
 	}
 }
 
@@ -103,15 +102,15 @@ void __init arch_init_irq(void)
 	local_irq_disable();
 
 	/* most bonito irq should be level triggered */
-	BONITO_INTEDGE = BONITO_ICU_SYSTEMERR | BONITO_ICU_MASTERERR |
-		BONITO_ICU_RETRYERR | BONITO_ICU_MBOXES;
-	BONITO_INTSTEER = 0;
+	LOONGSON_INTEDGE = LOONGSON_ICU_SYSTEMERR | LOONGSON_ICU_MASTERERR |
+		LOONGSON_ICU_RETRYERR | LOONGSON_ICU_MBOXES;
+	LOONGSON_INTSTEER = 0;
 
 	/*
 	 * Mask out all interrupt by writing "1" to all bit position in
 	 * the interrupt reset reg.
 	 */
-	BONITO_INTENCLR = ~0;
+	LOONGSON_INTENCLR = ~0;
 
 	/* init all controller
 	 *   0-15         ------> i8259 interrupt
@@ -125,10 +124,10 @@ void __init arch_init_irq(void)
 	bonito_irq_init();
 
 	/*
-	printk("GPIODATA=%x, GPIOIE=%x\n", BONITO_GPIODATA, BONITO_GPIOIE);
+	printk("GPIODATA=%x, GPIOIE=%x\n", LOONGSON_GPIODATA, LOONGSON_GPIOIE);
 	printk("INTEN=%x, INTSET=%x, INTCLR=%x, INTISR=%x\n",
-			BONITO_INTEN, BONITO_INTENSET,
-			BONITO_INTENCLR, BONITO_INTISR);
+			LOONGSON_INTEN, LOONGSON_INTENSET,
+			LOONGSON_INTENCLR, LOONGSON_INTISR);
 	*/
 
 	/* bonito irq at IP2 */

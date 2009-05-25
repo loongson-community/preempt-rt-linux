@@ -22,7 +22,7 @@
 #ifndef _LOONGSON_PCI_H_
 #define _LOONGSON_PCI_H_
 
-extern struct pci_ops bonito64_pci_ops;
+extern struct pci_ops loongson_pci_ops;
 
 #define LOONGSON2E_PCI_MEM_START	0x14000000UL
 #define LOONGSON2E_PCI_MEM_END		0x1fffffffUL

@@ -29,7 +29,8 @@
 #include <linux/pci.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
-#include <asm/mips-boards/bonito64.h>
+
+#include <loongson.h>
 #include <pci.h>
 
 static struct resource loongson2e_pci_mem_resource = {
@@ -47,7 +48,7 @@ static struct resource loongson2e_pci_io_resource = {
 };
 
 static struct pci_controller  loongson2e_pci_controller = {
-	.pci_ops        = &bonito64_pci_ops,
+	.pci_ops        = &loongson_pci_ops,
 	.io_resource    = &loongson2e_pci_io_resource,
 	.mem_resource   = &loongson2e_pci_mem_resource,
 	.mem_offset     = 0x00000000UL,
@@ -64,17 +65,17 @@ static void __init ict_pcimap(void)
 	 * pcimap: bit18,pcimap_2; bit[17-12],lo2;bit[11-6],lo1;bit[5-0],lo0
 	 */
 	/* 1,00 0110 ,0001 01,00 0000 */
-	BONITO_PCIMAP = 0x46140;
+	LOONGSON_PCIMAP = 0x46140;
 
 	/* 1, 00 0010, 0000,01, 00 0000 */
-	/* BONITO_PCIMAP = 0x42040; */
+	/* LOONGSON_PCIMAP = 0x42040; */
 
 	/*
 	 * PCI to local mapping: [2G,2G+256M] -> [0,256M]
 	 */
-	BONITO_PCIBASE0 = 0x80000000;
-	BONITO_PCIBASE1 = 0x00800000;
-	BONITO_PCIBASE2 = 0x90000000;
+	LOONGSON_PCIBASE0 = 0x80000000;
+	LOONGSON_PCIBASE1 = 0x00800000;
+	LOONGSON_PCIBASE2 = 0x90000000;
 
 }
 
