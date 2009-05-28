@@ -65,6 +65,8 @@
 #define EF_CP0_CAUSE		43
 #define EF_UNUSED0		44
 
+#define EF_ORIG_V0		45
+
 #define EF_SIZE			180
 
 #endif
@@ -120,6 +122,9 @@
 #define EF_CP0_BADVADDR		35
 #define EF_CP0_STATUS		36
 #define EF_CP0_CAUSE		37
+
+
+#define EF_ORIG_V0			38
 
 #define EF_SIZE			304	/* size in bytes */
 

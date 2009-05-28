@@ -201,8 +201,8 @@ einval:	li	v0, -ENOSYS
 	END(sys32_syscall)
 
 	.align	3
-	.type	sys_call_table,@object
-sys_call_table:
+	.type   sys_call_table,@object
+EXPORT(sys_call_table)
 	PTR	sys32_syscall			/* 4000 */
 	PTR	sys_exit
 	PTR	sys_fork

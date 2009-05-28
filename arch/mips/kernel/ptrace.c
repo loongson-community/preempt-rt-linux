@@ -25,6 +25,7 @@
 #include <linux/security.h>
 #include <linux/audit.h>
 #include <linux/seccomp.h>
+#include <linux/ftrace.h>
 
 #include <asm/byteorder.h>
 #include <asm/cpu.h>
@@ -60,7 +61,7 @@ int ptrace_getregs(struct task_struct *child, __s64 __user *data)
 	struct pt_regs *regs;
 	int i;
 
-	if (!access_ok(VERIFY_WRITE, data, 38 * 8))
+	if (!access_ok(VERIFY_WRITE, data, 39 * 8))
 		return -EIO;
 
 	regs = task_pt_regs(child);
@@ -73,6 +74,7 @@ int ptrace_getregs(struct task_struct *child, __s64 __user *data)
 	__put_user((long)regs->cp0_badvaddr, data + EF_CP0_BADVADDR - EF_R0);
 	__put_user((long)regs->cp0_status, data + EF_CP0_STATUS - EF_R0);
 	__put_user((long)regs->cp0_cause, data + EF_CP0_CAUSE - EF_R0);
+	__put_user((long)regs->orig_v0, data + EF_ORIG_V0 - EF_R0);
 
 	return 0;
 }
@@ -87,7 +89,7 @@ int ptrace_setregs(struct task_struct *child, __s64 __user *data)
 	struct pt_regs *regs;
 	int i;
 
-	if (!access_ok(VERIFY_READ, data, 38 * 8))
+	if (!access_ok(VERIFY_READ, data, 39 * 8))
 		return -EIO;
 
 	regs = task_pt_regs(child);
@@ -97,6 +99,7 @@ int ptrace_setregs(struct task_struct *child, __s64 __user *data)
 	__get_user(regs->lo, data + EF_LO - EF_R0);
 	__get_user(regs->hi, data + EF_HI - EF_R0);
 	__get_user(regs->cp0_epc, data + EF_CP0_EPC - EF_R0);
+	__get_user(regs->orig_v0, data + EF_ORIG_V0 - EF_R0);
 
 	/* badvaddr, status, and cause may not be written.  */
 
@@ -575,6 +578,9 @@ asmlinkage void do_syscall_trace(struct pt_regs *regs, int entryexit)
 	if (!(current->ptrace & PT_PTRACED))
 		goto out;
 
+	if (unlikely(test_thread_flag(TIF_SYSCALL_FTRACE)))
+		ftrace_syscall_exit(regs);
+
 	if (!test_thread_flag(TIF_SYSCALL_TRACE))
 		goto out;
 
@@ -594,6 +600,9 @@ asmlinkage void do_syscall_trace(struct pt_regs *regs, int entryexit)
 	}
 
 out:
+	if (unlikely(test_thread_flag(TIF_SYSCALL_FTRACE)))
+		ftrace_syscall_enter(regs);
+
 	if (unlikely(current->audit_context) && !entryexit)
 		audit_syscall_entry(audit_arch(), regs->regs[0],
 				    regs->regs[4], regs->regs[5],
