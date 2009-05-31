@@ -24,17 +24,45 @@ void mach_prepare_reboot(void)
 	LOONGSON_CHIPCFG0 |= 0x7;
 
 	/* sending an reset signal to EC(embedded controller) */
-	writeb(REG_RESET_HIGH, (u8 *) (mips_io_port_base + EC_IO_PORT_HIGH));
-	writeb(REG_RESET_LOW, (u8 *) (mips_io_port_base + EC_IO_PORT_LOW));
+	writeb(REG_RESET_HIGH,
+	       (u8 *) (mips_io_port_base + EC_RESET_IO_PORT_HIGH));
+	writeb(REG_RESET_LOW,
+	       (u8 *) (mips_io_port_base + EC_RESET_IO_PORT_LOW));
 	mmiowb();
-	writeb(BIT_RESET_ON, (u8 *) (mips_io_port_base + EC_IO_PORT_DATA));
+	writeb(BIT_RESET_ON,
+	       (u8 *) (mips_io_port_base + EC_RESET_IO_PORT_DATA));
 	mmiowb();
 }
 
 void mach_prepare_shutdown(void)
 {
+#ifdef CONFIG_LEMOTE_YEELOONG2F_7INCH
+	{
+		u8 val;
+		u64 i;
+
+		writeb(REG_SHUTDOWN_HIGH,
+		       (u8 *) (mips_io_port_base + EC_SHUTDOWN_IO_PORT_HIGH));
+		writeb(REG_SHUTDOWN_LOW,
+		       (u8 *) (mips_io_port_base + EC_SHUTDOWN_IO_PORT_LOW));
+		mmiowb();
+		val =
+		    readb((u8 *) (mips_io_port_base +
+				  EC_SHUTDOWN_IO_PORT_DATA));
+		writeb(val & (~BIT_SHUTDOWN_ON),
+		       (u8 *) (mips_io_port_base + EC_SHUTDOWN_IO_PORT_DATA));
+		mmiowb();
+		/* need enough wait here... how many microseconds needs? */
+		for (i = 0; i < 0x10000; i++)
+			delay();
+		writeb(val | BIT_SHUTDOWN_ON,
+		       (u8 *) (mips_io_port_base + EC_SHUTDOWN_IO_PORT_DATA));
+		mmiowb();
+	}
+#else
 	/* cpu-gpio0 output low */
 	LOONGSON_GPIODATA &= ~0x00000001;
 	/* cpu-gpio0 as output */
 	LOONGSON_GPIOIE &= ~0x00000001;
+#endif
 }

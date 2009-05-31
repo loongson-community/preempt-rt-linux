@@ -44,6 +44,13 @@ extern void mach_irq_dispatch(unsigned int pending);
 extern void mach_prepare_reboot(void);
 extern void mach_prepare_shutdown(void);
 
+/* We need this in some places... */
+#define delay()	({			\
+	int x;					\
+	for (x = 0; x < 100000; x++)  \
+		__asm__ __volatile__(""); \
+})
+
 #define LOONGSON_REG(x) \
 	(*(u32 *)((char *)CKSEG1ADDR(LOONGSON_REG_BASE) + (x)))
 #define LOONGSON_IRQ_BASE	32
