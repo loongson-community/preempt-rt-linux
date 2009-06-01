@@ -20,16 +20,17 @@
 /* loongson internal northbridge initialization */
 extern void bonito_irq_init(void);
 
-/* command line arguments */
+/* environment arguments from bootloader */
 extern unsigned long bus_clock, cpu_clock_freq;
 extern unsigned long memsize, highmemsize;
 
 /* loongson-based machines specific reboot setup */
 extern void loongson_reboot_setup(void);
 
-/* loongson-specific command line and memory initialization */
+/* loongson-specific command line, env and memory initialization */
 extern void __init prom_init_memory(void);
 extern void __init prom_init_cmdline(void);
+extern void __init prom_init_env(void);
 
 /* irq operation functions */
 extern void bonito_irqdispatch(void);

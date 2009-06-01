@@ -2,7 +2,7 @@
 # Makefile for loongson based machines.
 #
 
-obj-y += setup.o init.o cmdline.o time.o reset.o irq.o \
+obj-y += setup.o init.o cmdline.o env.o time.o reset.o irq.o \
 	pci.o bonito-irq.o mem.o misc.o
 
 #

@@ -32,6 +32,7 @@ void __init prom_init(void)
 			 ioremap(LOONGSON_PCIIO_BASE, LOONGSON_PCIIO_SIZE));
 
 	prom_init_cmdline();
+	prom_init_env();
 	prom_init_memory();
 }
 
