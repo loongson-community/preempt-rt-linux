@@ -117,6 +117,20 @@
 		.endm
 #else
 		.macro	get_saved_sp	/* Uniprocessor variation */
+#ifdef CONFIG_CPU_LOONGSON2
+		move k0, ra
+		jal	2008f
+		nop
+2008 :		jal	2008f
+		nop
+2008 :		jal	2008f
+		nop
+2008 :		jal	2008f
+		nop
+2008 :		move	ra, k0
+		li	k0, 3
+		mtc0	k0, $22
+#endif
 #if defined(CONFIG_32BIT) || defined(KBUILD_64BIT_SYM32)
 		lui	k1, %hi(kernelsp)
 #else
