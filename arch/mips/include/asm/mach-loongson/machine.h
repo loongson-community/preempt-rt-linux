@@ -3,6 +3,8 @@
  *
  * Copyright (c) 2009 Wu Zhangjin <wuzj@lemote.com>
  *
+ * Copyright (C) 2009       Zhang Le
+ *
  * This program is free software; you can redistribute it
  * and/or modify it under the terms of the GNU General
  * Public License as published by the Free Software
@@ -15,7 +17,7 @@
 
 #ifdef CONFIG_LEMOTE_FULOONG2E
 
-#define MACH_NAME			"lemote-fuloong-2e"
+#define MACHTYPE	MACH_LEMOTE_FL2E
 
 #define LOONGSON_UART_BASE		(LOONGSON_PCIIO_BASE + 0x3f8)
 #define	LOONGSON_UART_BAUD		1843200
@@ -29,7 +31,7 @@
 
 #elif defined(CONFIG_LEMOTE_FULOONG2F)
 
-#define MACH_NAME			"lemote-fuloong-2f"
+#define MACHTYPE	MACH_LEMOTE_FL2F
 
 #define LOONGSON_UART_BASE		(LOONGSON_PCIIO_BASE + 0x2f8)
 #define LOONGSON_UART_BAUD		1843200
@@ -37,37 +39,12 @@
 
 #else /* CONFIG_CPU_YEELOONG2F */
 
-#define MACH_NAME			"lemote-yeeloong(2f)"
+#define MACHTYPE	MACH_LEMOTE_YL2F89
 
 /* yeeloong use the CPU serial port of Loongson2F */
 #define LOONGSON_UART_BASE		(LOONGSON_LIO1_BASE + 0x3f8)
 #define	LOONGSON_UART_BAUD		3686400
 #define LOONGSON_UART_IOTYPE		UPIO_MEM
-
-/*
- * The following registers are determined by the EC index configuration.
- * 1, fill the PORT_HIGH as EC register high part.
- * 2, fill the PORT_LOW as EC register low part.
- * 3, fill the PORT_DATA as EC register write data or get the data from it.
- */
-#define	EC_RESET_IO_PORT_HIGH	0x0381
-#define	EC_RESET_IO_PORT_LOW	0x0382
-#define	EC_RESET_IO_PORT_DATA	0x0383
-#define	REG_RESET_HIGH	0xF4	/* reset the machine auto-clear : rd/wr */
-#define REG_RESET_LOW	0xEC
-#define	BIT_RESET_ON	(1 << 0)
-
-/* 7inch yeeloong have the different shutdown hardware logic from 8.9inch */
-#ifdef CONFIG_LEMOTE_YEELOONG2F_7INCH
-
-#define	EC_SHUTDOWN_IO_PORT_HIGH	0xff2d
-#define	EC_SHUTDOWN_IO_PORT_LOW		0xff2e
-#define	EC_SHUTDOWN_IO_PORT_DATA	0xff2f
-#define	REG_SHUTDOWN_HIGH	0xFC
-#define REG_SHUTDOWN_LOW	0x29
-#define	BIT_SHUTDOWN_ON	(1 << 1)
-
-#endif
 
 #endif	/* !CONFIG_LEMOTE_FULOONG2E */
 

@@ -93,18 +93,6 @@ config LEMOTE_YEELOONG2F
 
 endchoice
 
-choice
-	prompt "YeeLoong Type"
-	depends on LEMOTE_YEELOONG2F
-
-config LEMOTE_YEELOONG2F_89INCH
-	bool "8.9 inch"
-
-config LEMOTE_YEELOONG2F_7INCH
-	bool "7 inch"
-
-endchoice
-
 config CS5536
 	bool
 

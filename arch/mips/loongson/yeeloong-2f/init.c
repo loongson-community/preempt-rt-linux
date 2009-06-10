@@ -27,7 +27,7 @@ void __init mach_prom_init_cmdline(void)
 	/*Emulate post for usb */
 	_wrmsr(USB_MSR_REG(USB_CONFIG), 0x4, 0xBF000);
 
-	if ((strstr(arcs_cmdline, "no_auto_cmd")) == NULL) {
+	if (strstr(arcs_cmdline, "no_auto_cmd") == NULL) {
 		unsigned char default_root[50] = "/dev/hda1";
 		char *pmon_ver, *ec_ver, *p, version[60], ec_version[64];
 
@@ -68,4 +68,14 @@ void __init mach_prom_init_cmdline(void)
 		strcat(arcs_cmdline, " console=tty2");
 		strcat(arcs_cmdline, " quiet");
 	}
+
+	/*
+	 * automatically pass the vga argument via machtype argument if
+	 * vga is not passed: yeeloong-7inch's vga mode is 800x480x24
+	 */
+
+	if ((strstr(arcs_cmdline, "vga") == NULL)
+			&& (strstr(arcs_cmdline, "machtype") != NULL)
+				&& (strstr(arcs_cmdline, "7inch") != NULL))
+		strcat(arcs_cmdline, " vga=800x480x16");
 }

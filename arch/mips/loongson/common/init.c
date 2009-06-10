@@ -18,7 +18,6 @@
 #include <linux/bootmem.h>
 
 #include <asm/bootinfo.h>
-#include <asm/cpu.h>
 
 #include <loongson.h>
 
@@ -35,9 +34,6 @@ static inline void set_loongson_addrwincfg_base(unsigned long base)
 
 void __init prom_init(void)
 {
-	/* init mach type, does we need to init it?? */
-	mips_machtype = PRID_IMP_LOONGSON2;
-
 	/* init several base address */
 	set_io_port_base((unsigned long)
 			 ioremap(LOONGSON_PCIIO_BASE, LOONGSON_PCIIO_SIZE));
