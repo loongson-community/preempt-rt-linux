@@ -75,6 +75,7 @@ ifdef M
   endif
 endif
 
+KBUILD_GCOV_FLAGS	= -fprofile-arcs -ftest-coverage
 
 # kbuild supports saving output files in a separate directory.
 # To locate output files in a separate directory two syntaxes are supported.
@@ -343,9 +344,10 @@ AFLAGS_KERNEL	=
 
 # Use LINUXINCLUDE when you must reference the include/ directory.
 # Needed to be compatible with the O= option
-LINUXINCLUDE    := -Iinclude \
-                   $(if $(KBUILD_SRC),-Iinclude2 -I$(srctree)/include) \
-                   -I$(srctree)/arch/$(hdr-arch)/include               \
+LINUXINCLUDE    := -I$(objtree)/include -I$(srctree) -I$(objtree)	\
+                   $(if $(KBUILD_SRC),-I$(objtree)/include2		\
+				      -I$(srctree)/include)		\
+                   -I$(srctree)/arch/$(hdr-arch)/include		\
                    -include include/linux/autoconf.h
 
 KBUILD_CPPFLAGS := -D__KERNEL__
@@ -367,6 +369,7 @@ export HOSTCXX HOSTCXXFLAGS LDFLAGS_MODULE CHECK CHECKFLAGS
 export KBUILD_CPPFLAGS NOSTDINC_FLAGS LINUXINCLUDE OBJCOPYFLAGS LDFLAGS
 export KBUILD_CFLAGS CFLAGS_KERNEL CFLAGS_MODULE
 export KBUILD_AFLAGS AFLAGS_KERNEL AFLAGS_MODULE
+export KBUILD_CFLAGS_NOGCOV KBUILD_GCOV_FLAGS
 
 # When compiling out-of-tree modules, put MODVERDIR in the module
 # tree rather than in the kernel tree. The kernel tree might
@@ -595,6 +598,11 @@ endif
 ifneq ($(KCFLAGS),)
         $(call warn-assign,CFLAGS)
         KBUILD_CFLAGS += $(KCFLAGS)
+endif
+
+KBUILD_CFLAGS_NOGCOV := $(KBUILD_CFLAGS)
+ifdef CONFIG_GCOV_ALL
+KBUILD_CFLAGS += $(KBUILD_GCOV_FLAGS)
 endif
 
 # Use --build-id when available.
@@ -1225,7 +1233,9 @@ clean: archclean $(clean-dirs)
 		\( -name '*.[oas]' -o -name '*.ko' -o -name '.*.cmd' \
 		-o -name '.*.d' -o -name '.*.tmp' -o -name '*.mod.c' \
 		-o -name '*.symtypes' -o -name 'modules.order' \
-		-o -name 'Module.markers' -o -name '.tmp_*.o.*' \) \
+		-o -name 'Module.markers' -o -name '.tmp_*.o.*' \
+		-o -name '*.bb' -o -name '*.bbg' -o -name '*.da' \
+		-o -name '*.gcno' -o -name '*.gcda' \) \
 		-type f -print | xargs rm -f
 
 # mrproper - Delete all generated files, including .config

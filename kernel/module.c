@@ -46,6 +46,7 @@
 #include <linux/rculist.h>
 #include <asm/uaccess.h>
 #include <asm/cacheflush.h>
+#include <linux/gcov.h>
 #include <linux/license.h>
 #include <asm/sections.h>
 #include <linux/tracepoint.h>
@@ -1483,6 +1484,11 @@ static void free_module(struct module *mod)
 	/* Arch-specific cleanup. */
 	module_arch_cleanup(mod);
 
+#ifdef CONFIG_GCOV_PROFILE
+	if (mod->ctors_start && mod->ctors_end)
+		remove_bb_link(mod);
+#endif
+
 	/* Module unload stuff */
 	module_unload_free(mod);
 
@@ -2097,6 +2103,13 @@ static noinline struct module *load_module(void __user *umod,
 		goto free_init;
 	}
 #endif
+
+#ifdef CONFIG_GCOV_PROFILE
+	modindex = find_sec(hdr, sechdrs, secstrings, ".ctors");
+	mod->ctors_start = (char *)sechdrs[modindex].sh_addr;
+	mod->ctors_end   = (char *)(mod->ctors_start +
+				sechdrs[modindex].sh_size);
+#endif
 	/* Now we've moved module, initialize linked lists, etc. */
 	module_unload_init(mod);
 
@@ -2355,6 +2368,14 @@ SYSCALL_DEFINE3(init_module, void __user *, umod,
 
 	blocking_notifier_call_chain(&module_notify_list,
 			MODULE_STATE_COMING, mod);
+
+#ifdef CONFIG_GCOV_PROFILE
+	if (mod->ctors_start && mod->ctors_end) {
+		do_global_ctors((ctor_t *) mod->ctors_start,
+			(mod->ctors_end - mod->ctors_start) / sizeof(ctor_t),
+			 mod);
+	}
+#endif
 
 	/* Start the module */
 	if (mod->init != NULL)
