@@ -58,7 +58,7 @@ void mach_prepare_reboot(void)
 
 void mach_prepare_shutdown(void)
 {
-	char *system_type = get_system_type();
+	const char *system_type = get_system_type();
 
 	if (strstr(system_type, "8.9inch") != NULL) {
 		/* cpu-gpio0 output low */
