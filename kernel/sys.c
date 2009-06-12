@@ -45,6 +45,10 @@
 #include <asm/io.h>
 #include <asm/unistd.h>
 
+#ifdef CONFIG_KFT_DUMP
+#include <linux/kft.h>
+#endif
+
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a,b)	(-EINVAL)
 #endif
@@ -302,6 +306,10 @@ void kernel_restart_prepare(char *cmd)
 void kernel_restart(char *cmd)
 {
 	kernel_restart_prepare(cmd);
+#ifdef CONFIG_KFT_DUMP
+       kft_dump_log(NULL);
+#endif
+
 	if (!cmd)
 		printk(KERN_EMERG "Restarting system.\n");
 	else

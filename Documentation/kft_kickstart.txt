@@ -1,0 +1,128 @@
+	kft kickstart
+
+		falcon <wuzhangjin@gmail.com>, <wuzj@lemote.com>
+		2009-03-09
+
+1. kft
+
+kft is short for kernel function tracing, which is a patch for linux kernel, it
+can be used to trace the kernel functions from the user
+space(dynamically/statically).
+
+be differ from ftrace in rt-preempt, it's not latency tracing, but kernel
+function executing time & calling relationship tracing. which can be used to
+find out the hotspots for performance optimization.
+
+please read Documentation/kft.txt or the source code of the patch to learn more
+about it.
+
+2. usage
+
+2.1 principle
+
+	apps					user functions			<-- cscope,calltree,gprof,gcov..
+
+				---------------system calls-----------
+
+	kernel					kernel functions		<-- kft,ftrace,kgcov...
+
+there are lots of tools to tracing user functions & kernel functions, which are
+listed above. but kft, which gives us the possibility "go through" user space
+to kernel space.
+
+when executing a user space application, we can use strace to trace the system
+calls used by this application, and then configure these system calls as the
+filter entries or exites in the configuration file of kft. after them, prime
+kft and start your application, the relative kernel functions called by the
+relative system calls will be traced, after that, we can try to pry into the
+internal of kernel, what have happen, irq, interrupts, kernel calling
+relatiionship, kernel executing time. and based on these results, we can do a
+lot of we want.
+
+2.2 use it
+
+* download the latest kft patch from ftp://dslab.lzu.edu.cn/pub/kft
+* patch kernel with the relative kft patch
+* configure it
+
+make sure these options are there:
+
+CONFIG_KALLSYMS=y
+CONFIG_KALLSYMS_ALL=y
+# CONFIG_KALLSYMS_EXTRA_PASS is not set
+CONFIG_KFT=y
+CONFIG_KFT_STATIC_RUN=y
+
+!!!NOTE: currently, kft not work on linux kernel/64bit for loongson2f, so
+please compile the kernel in 32bit for loongson2f.
+
+* compile it
+
+when enabling CONFIG_KFT_STATIC_RUN, please do this before compiling:
+
+chmod a+x scripts/mkkftrun.pl
+
+this tool is used to create a kernel/kftstatic.c from kernel/kftstatic.conf
+
+* reboot to the new kernel
+
+* dump the kernel sysmbols
+
+cat /proc/kallsyms > system.map
+
+* write a configuration file
+
+# file: config.sym
+new
+begin
+	trigger start entry sys_open
+	trigger stop exit sys_open
+end
+
+save this content to a file named config.sym
+
+this configuraiton are used to tracing the sys_open excuting procedure. please
+read the Documentation/kft.txt to learn about about the configuration language.
+
+* convert the symbols to address to make kernel comfortable
+
+chmod a+x scripts/sym2addr
+./scripts/sym2addr config.sym system.map > config.addr
+
+* feed the configuration file to kernel
+
+cat config.addr > /proc/kft
+
+* prime the kft
+
+echo prime > /proc/kft
+
+* start your program
+
+start your program, which will call the traced system call listed in
+configuration file.
+
+* trace the status of kft
+
+cat /proc/kft
+
+if you have found out a word like "completed", dump the data from
+/proc/kft_data
+
+* dump the data
+
+cat /proc/kft_data > log.addr
+
+* convert the address to make people comfortable
+
+chmod a+x scripts/addr2sym
+./scripts/addr2sym < log.addr -m system.map > log.sym
+
+* analyze it
+
+chmod a+x scripts/kd
+./scripts/kd -c -l -i log.sym
+
+please learn more the kd usage from Documentation/kft.txt
+
+there is all, be happy to play with it.

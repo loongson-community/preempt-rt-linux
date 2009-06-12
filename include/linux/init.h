@@ -308,6 +308,11 @@ void __init parse_early_options(char *cmdline);
 #define __initdata_or_module __initdata
 #endif /*CONFIG_MODULES*/
 
+#ifndef __ASSEMBLY__
+#define __instrument
+#define __noinstrument __attribute__ ((no_instrument_function))
+#endif
+
 /* Functions marked as __devexit may be discarded at kernel link time, depending
    on config options.  Newer versions of binutils detect references from
    retained sections to discarded sections and flag an error.  Pointers to

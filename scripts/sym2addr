@@ -1,0 +1,25 @@
+#/bin/sh
+
+if [ -z $2 ]; then
+	echo "Usage: sym2addr <file> <mapfile>"
+	echo "Reads <file> and replaces function names with addresses, for any"
+        echo " word that matches a symbol in <mapfile>."
+	echo "The result is sent to standard out."
+	exit 1
+fi
+
+infile=$1
+mapfile=$2
+for word in `cat $infile` ; do
+	case $word in
+		new|begin|trigger|start|stop|entry|exit|time|filter|mintime|maxtime|noints|onlyints|0|funclist|fend)
+			;;
+		*)
+			addr=`grep " ${word}$" $mapfile | cut -b 1-8`
+			if [ -n "$addr" ]; then
+				word="0x$addr"
+			fi
+			;;
+	esac
+	echo -n "$word "
+done

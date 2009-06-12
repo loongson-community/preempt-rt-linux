@@ -17,6 +17,11 @@ KBUILD_CFLAGS += $(call cc-option,-fno-stack-protector)
 KBUILD_AFLAGS  := $(KBUILD_CFLAGS) -D__ASSEMBLY__
 
 LDFLAGS := -m elf_$(UTS_MACHINE)
+
+ifdef CONFIG_KFT
+EXTRA_CFLAGS   := -fno-instrument-functions
+endif
+
 LDFLAGS_vmlinux := -T
 
 $(obj)/vmlinux: $(src)/vmlinux_$(BITS).lds $(obj)/head_$(BITS).o $(obj)/misc.o $(obj)/piggy.o FORCE

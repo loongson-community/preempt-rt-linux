@@ -193,7 +193,11 @@ NESTED(kernel_entry, 16, sp)			# kernel entry point
 	set_saved_sp	sp, t0, t1
 	PTR_SUBU	sp, 4 * SZREG		# init stack pointer
 
+#ifdef CONFIG_KFT
+	jal		start_kernel
+#else
 	j		start_kernel
+#endif
 	END(kernel_entry)
 
 	__CPUINIT

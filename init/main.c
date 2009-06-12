@@ -51,6 +51,7 @@
 #include <linux/rmap.h>
 #include <linux/mempolicy.h>
 #include <linux/key.h>
+#include <linux/kft.h>
 #include <linux/buffer_head.h>
 #include <linux/page_cgroup.h>
 #include <linux/debug_locks.h>
@@ -98,6 +99,10 @@ static inline void mark_rodata_ro(void) { }
 #ifdef CONFIG_TC
 extern void tc_init(void);
 #endif
+
+#ifdef CONFIG_KFT_STATIC_RUN
+extern void to_userspace(void);
+#endif /* CONFIG_KFT_STATIC_RUN */
 
 enum system_states system_state __read_mostly;
 EXPORT_SYMBOL(system_state);
@@ -562,6 +567,7 @@ asmlinkage void __init start_kernel(void)
  * Interrupts are still disabled. Do necessary setups, then
  * enable them
  */
+	setup_early_kft_clock();
 	lock_kernel();
 	tick_init();
 	boot_cpu_init();
@@ -818,6 +824,11 @@ static noinline int init_post(void)
 
 	current->signal->flags |= SIGNAL_UNKILLABLE;
 
+#ifdef CONFIG_KFT_STATIC_RUN
+      /* This is a stub function, for use as a stop trigger */
+      to_userspace();
+#endif /* CONFIG_KFT_STATIC_RUN */
+
 	if (ramdisk_execute_command) {
 		run_init_process(ramdisk_execute_command);
 		printk(KERN_WARNING "Failed to execute %s\n",
@@ -842,6 +853,12 @@ static noinline int init_post(void)
 
 	panic("No init found.  Try passing init= option to kernel.");
 }
+
+#ifdef CONFIG_KFT_STATIC_RUN
+void to_userspace(void)
+{
+}
+#endif /* CONFIG_KFT_STATIC_RUN */
 
 static int __init kernel_init(void * unused)
 {

@@ -74,6 +74,8 @@ obj-$(CONFIG_AUDIT_TREE) += audit_tree.o
 obj-$(CONFIG_KPROBES) += kprobes.o
 obj-$(CONFIG_KGDB) += kgdb.o
 obj-$(CONFIG_DETECT_SOFTLOCKUP) += softlockup.o
+obj-$(CONFIG_KFT) += kft.o
+obj-$(CONFIG_KFT_STATIC_RUN) += kftstatic.o
 obj-$(CONFIG_DETECT_HUNG_TASK) += hung_task.o
 obj-$(CONFIG_GENERIC_HARDIRQS) += irq/
 obj-$(CONFIG_SECCOMP) += seccomp.o
@@ -105,6 +107,11 @@ ifneq ($(CONFIG_SCHED_OMIT_FRAME_POINTER),y)
 CFLAGS_sched.o := $(PROFILING) -fno-omit-frame-pointer
 endif
 
+# On ppc64, if instrumtation is turned on for kft.c, then kernel won't boot.
+# It's OK to turn off instrumentation for other arches, since we really don't
+# want any of the functions in kft.c traced anyway.
+CFLAGS_kft.o := -fno-instrument-functions
+
 $(obj)/configs.o: $(obj)/config_data.h
 
 # config_data.h contains the same information as ikconfig.h but gzipped.
@@ -118,6 +125,14 @@ quiet_cmd_ikconfiggz = IKCFG   $@
 targets += config_data.h
 $(obj)/config_data.h: $(obj)/config_data.gz FORCE
 	$(call if_changed,ikconfiggz)
+
+# Files generated that shall be removed upon make clean
+clean-files := kftstatic.c
+
+$(obj)/kftstatic.o: $(obj)/kftstatic.c
+
+$(obj)/kftstatic.c: $(src)/kftstatic.conf
+	$(srctree)/scripts/mkkftrun.pl $< > $@
 
 $(obj)/time.o: $(obj)/timeconst.h
 

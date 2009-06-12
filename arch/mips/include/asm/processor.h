@@ -13,7 +13,7 @@
 
 #include <linux/cpumask.h>
 #include <linux/threads.h>
-
+#include <linux/compiler.h>
 #include <asm/cachectl.h>
 #include <asm/cpu.h>
 #include <asm/cpu-info.h>

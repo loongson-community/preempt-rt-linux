@@ -1,6 +1,12 @@
 #
 # Makefile for some libs needed in the kernel.
 #
+# something in the /lib directory blows up when instrumented, on PPC64 - TODO:check - hofrat
+ifdef CONFIG_PPC64
+ifdef CONFIG_KFT
+CFLAGS += -fno-instrument-functions
+endif
+endif
 
 ifdef CONFIG_FUNCTION_TRACER
 ORIG_CFLAGS := $(KBUILD_CFLAGS)

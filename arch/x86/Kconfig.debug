@@ -271,4 +271,40 @@ config OPTIMIZE_INLINING
 
 	  If unsure, say N.
 
+config KFT
+       bool "Kernel Function Trace"
+       help
+         Say Y here to turn on kernel function tracing.
+         This allows you to get a trace of kernel functions
+         during kernel execution.  This can be helpful for
+         debugging, but adds overhead to every kernel function
+         invocation.  The overhead is small, but still present,
+         even when tracing is not active.
+
+         See the file Documentation/kft.txt for more information.
+         Say N here if you are unsure.
+config KFT_STATIC_RUN
+       bool "Static function tracing configuration"
+       depends on KFT
+       help
+         Say Y here to compile the KFT configuration statically
+         into the kernel.  This is needed if you plan to use KFT
+         to get information about function timings on kernel bootup
+         (prior to the kernel starting user space).  To do this, you
+         need to create a valid kernel/kftstatic.conf file.
+
+config KFT_CLOCK_SCALE
+       int "Scaling factor for early initialization of KFT clock"
+       depends on KFT
+       default 0
+       help
+         Enter the number used for clock scaling early in the machine
+         bootup sequence.  This is required on many platforms in order
+         for KFT to work correctly before time_init().  You need to investigate
+         your kernel source to find out what data element or routine this
+         number is used with, and experiment to find the correct value to
+         use here.
+
+         If unsure what to do, leave as 0!
+
 endmenu

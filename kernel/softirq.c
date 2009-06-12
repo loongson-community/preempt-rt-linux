@@ -294,7 +294,7 @@ void irq_enter(void)
 /*
  * Exit an interrupt context. Process softirqs if needed and possible:
  */
-void irq_exit(void)
+void __noinstrument irq_exit(void)
 {
 	account_system_vtime(current);
 	trace_hardirq_exit();
