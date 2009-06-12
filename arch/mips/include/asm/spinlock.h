@@ -34,7 +34,7 @@
  * becomes equal to the the initial value of the tail.
  */
 
-static inline int __raw_spin_is_locked(raw_spinlock_t *lock)
+static inline int __raw_spin_is_locked(__raw_spinlock_t *lock)
 {
 	unsigned int counters = ACCESS_ONCE(lock->lock);
 
@@ -45,7 +45,7 @@ static inline int __raw_spin_is_locked(raw_spinlock_t *lock)
 #define __raw_spin_unlock_wait(x) \
 	while (__raw_spin_is_locked(x)) { cpu_relax(); }
 
-static inline int __raw_spin_is_contended(raw_spinlock_t *lock)
+static inline int __raw_spin_is_contended(__raw_spinlock_t *lock)
 {
 	unsigned int counters = ACCESS_ONCE(lock->lock);
 
@@ -53,7 +53,7 @@ static inline int __raw_spin_is_contended(raw_spinlock_t *lock)
 }
 #define __raw_spin_is_contended	__raw_spin_is_contended
 
-static inline void __raw_spin_lock(raw_spinlock_t *lock)
+static inline void __raw_spin_lock(__raw_spinlock_t *lock)
 {
 	int my_ticket;
 	int tmp;
@@ -134,7 +134,7 @@ static inline void __raw_spin_lock(raw_spinlock_t *lock)
 	smp_llsc_mb();
 }
 
-static inline void __raw_spin_unlock(raw_spinlock_t *lock)
+static inline void __raw_spin_unlock(__raw_spinlock_t *lock)
 {
 	int tmp;
 
@@ -174,7 +174,7 @@ static inline void __raw_spin_unlock(raw_spinlock_t *lock)
 	}
 }
 
-static inline unsigned int __raw_spin_trylock(raw_spinlock_t *lock)
+static inline unsigned int __raw_spin_trylock(__raw_spinlock_t *lock)
 {
 	int tmp, tmp2, tmp3;
 
@@ -256,7 +256,7 @@ static inline unsigned int __raw_spin_trylock(raw_spinlock_t *lock)
  */
 #define __raw_write_can_lock(rw)	(!(rw)->lock)
 
-static inline void __raw_read_lock(raw_rwlock_t *rw)
+static inline void __raw_read_lock(__raw_rwlock_t *rw)
 {
 	unsigned int tmp;
 
@@ -301,7 +301,7 @@ static inline void __raw_read_lock(raw_rwlock_t *rw)
 /* Note the use of sub, not subu which will make the kernel die with an
    overflow exception if we ever try to unlock an rwlock that is already
    unlocked or is being held by a writer.  */
-static inline void __raw_read_unlock(raw_rwlock_t *rw)
+static inline void __raw_read_unlock(__raw_rwlock_t *rw)
 {
 	unsigned int tmp;
 
@@ -335,7 +335,7 @@ static inline void __raw_read_unlock(raw_rwlock_t *rw)
 	}
 }
 
-static inline void __raw_write_lock(raw_rwlock_t *rw)
+static inline void __raw_write_lock(__raw_rwlock_t *rw)
 {
 	unsigned int tmp;
 
@@ -377,7 +377,7 @@ static inline void __raw_write_lock(raw_rwlock_t *rw)
 	smp_llsc_mb();
 }
 
-static inline void __raw_write_unlock(raw_rwlock_t *rw)
+static inline void __raw_write_unlock(__raw_rwlock_t *rw)
 {
 	smp_mb();
 
@@ -389,7 +389,7 @@ static inline void __raw_write_unlock(raw_rwlock_t *rw)
 	: "memory");
 }
 
-static inline int __raw_read_trylock(raw_rwlock_t *rw)
+static inline int __raw_read_trylock(__raw_rwlock_t *rw)
 {
 	unsigned int tmp;
 	int ret;
@@ -433,7 +433,7 @@ static inline int __raw_read_trylock(raw_rwlock_t *rw)
 	return ret;
 }
 
-static inline int __raw_write_trylock(raw_rwlock_t *rw)
+static inline int __raw_write_trylock(__raw_rwlock_t *rw)
 {
 	unsigned int tmp;
 	int ret;

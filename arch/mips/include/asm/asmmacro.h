@@ -21,7 +21,7 @@
 #endif
 
 #ifdef CONFIG_MIPS_MT_SMTC
-	.macro	local_irq_enable reg=t0
+	.macro	raw_local_irq_enable reg = t0
 	mfc0	\reg, CP0_TCSTATUS
 	ori	\reg, \reg, TCSTATUS_IXMT
 	xori	\reg, \reg, TCSTATUS_IXMT
@@ -29,31 +29,31 @@
 	_ehb
 	.endm
 
-	.macro	local_irq_disable reg=t0
+	.macro	raw_local_irq_disable reg = t0
 	mfc0	\reg, CP0_TCSTATUS
 	ori	\reg, \reg, TCSTATUS_IXMT
 	mtc0	\reg, CP0_TCSTATUS
 	_ehb
 	.endm
 #elif defined(CONFIG_CPU_MIPSR2)
-	.macro	local_irq_enable reg=t0
+	.macro	raw_local_irq_enable reg = t0
 	ei
 	irq_enable_hazard
 	.endm
 
-	.macro	local_irq_disable reg=t0
+	.macro	raw_local_irq_disable reg = t0
 	di
 	irq_disable_hazard
 	.endm
 #else
-	.macro	local_irq_enable reg=t0
+	.macro	raw_local_irq_enable reg = t0
 	mfc0	\reg, CP0_STATUS
 	ori	\reg, \reg, 1
 	mtc0	\reg, CP0_STATUS
 	irq_enable_hazard
 	.endm
 
-	.macro	local_irq_disable reg=t0
+	.macro	raw_local_irq_disable reg = t0
 	mfc0	\reg, CP0_STATUS
 	ori	\reg, \reg, 1
 	xori	\reg, \reg, 1

@@ -14,7 +14,7 @@
 
 #define PIT_TICK_RATE		1193182UL
 
-extern spinlock_t i8253_lock;
+extern raw_spinlock_t i8253_lock;
 
 extern void setup_pit_timer(void);
 
