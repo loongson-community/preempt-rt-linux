@@ -67,6 +67,7 @@ asmlinkage void plat_irq_dispatch(void)
 
 static struct irqaction cascade_irqaction = {
 	.handler = no_action,
+	.flags = IRQF_NODELAY,
 	.mask = CPU_MASK_NONE,
 	.name = "cascade",
 };
@@ -89,7 +90,7 @@ static struct irqaction ip6_irqaction = {
 	.handler = ip6_action,
 	.mask = CPU_MASK_NONE,
 	.name = "cascade",
-	.flags = IRQF_SHARED,
+	.flags = IRQF_SHARED | IRQF_NODELAY,
 };
 #else
 #define	ip6_irqaction	cascade_irqaction
@@ -102,7 +103,8 @@ void __init arch_init_irq(void)
 	 * int-handler is not on bootstrap
 	 */
 	clear_c0_status(ST0_IM | ST0_BEV);
-	local_irq_disable();
+	if (!irqs_disabled())
+		raw_local_irq_disable();
 
 	/* setting irq trigger mode */
 	set_irq_trigger_mode();
