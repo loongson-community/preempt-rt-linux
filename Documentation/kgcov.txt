@@ -1,0 +1,86 @@
+		kgcov kickstart
+
+        falcon <wuzhangjin@gmail.com> or <wuzj@lemote.com>
+        2009-03-12
+
+1. introduction
+
+kgcov[1] is the kernel version of gcov, which can be used to profile linux kernel.
+
+2. usage
+
+2.1 download the latest kgcov & the relative linux kernel
+
+download the latest kgcov from reference [2]. and the relative linux kernel
+from http://www.kernel.org
+
+2.2 patch kgcov to kernel
+
+$ cd /patch/to/linux-x.x.x
+$ patch -p1 < /path/to/linux-x.x.x-gcov.patch
+
+2.3 configure & compile it
+
+ensure choose these options
+
+CONFIG_GCOV_PROFILE=y
+CONFIG_GCOV_ALL=y
+CONFIG_GCOV_PROC=y
+CONFIG_GCOV_HAMMER=y
+
+compile it
+
+2.4 reboot into the new kernel & use it
+
+here we use the sched.c as an example,
+
+2.4.1 reset the data
+
+$ echo 0 > /proc/gcov/kernel/sched.gcda
+
+if you want to reset the whole kernel collected data
+
+$ echo 0 > /proc/gcov/vmlinux
+
+2.4.2 do something to trigger kernel collect coverage data
+
+here we often run the specific service application for getting a better
+performance via tuning the kernel.
+
+2.4.3 analyze it via the user space tool: gcov
+
+$ cp /proc/gcov/kernel/sched.gcda /path/to/kernel_source_code/kernel/
+$ cd /path/to/kernel_source_code/kernel
+$ gcov -b -c sched.c
+
+!NOTE!
+
+please make sure the source code is the one you just complied, for the tool
+gcov need the data file .gcno generated when compiling with kgcov options.
+
+2.4.4 tunning your kernel automatically
+
+when compling kernel with the following options(when enabled kgcov),
+
+KBUILD_GCOV_FLAGS = -fprofile-arcs -ftest-coverage
+
+we can compile the kernel again via the following option to let gcc find better
+branch assignments to achieve performance.
+
+CFLAGS_FLAGS = -fbranch-probabilities
+
+3. more
+
+"LCOV[2] is a graphical front-end for GCC's coverage testing tool gcov. It
+collects gcov data for multiple source files and creates HTML pages containing
+the source code annotated with coverage information. It also adds overview
+pages for easy navigation within the file structure."
+
+references
+
+[1] lcov
+http://ltp.sourceforge.net/coverage/lcov.php
+[2] gcov
+http://ltp.sourceforge.net/coverage/gcov.php
+[3] Linux Kernel GCOV - tool analysis
+http://linuxdevices.com/files/article062/der_herr_gcov.pdf
