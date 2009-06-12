@@ -796,7 +796,11 @@ static int __noinstrument parse_func(const char **pos, void **func_addr)
 {
 	int ret;
 
+#if BITS_PER_LONG == 64
+	ret = sscanf(*pos, "%lx", (unsigned long *)func_addr);
+#else
 	ret = sscanf(*pos, "%x", (int *)func_addr);
+#endif
 	skip_token(pos);
 	if (ret != 1)
 		return -EINVAL;
@@ -995,12 +999,22 @@ static int __noinstrument print_trigger_config(char *buf, int len,
 		dump_str(buf, len, "%s %s at time %lu\n", ts, ss, t->time);
 		break;
 	case TRIGGER_FUNC_ENTRY:
+#if BITS_PER_LONG == 64
+		dump_str(buf, len, "%s %s entry 0x%016lX\n", ts, ss,
+			(unsigned long)t->func_addr);
+#else
 		dump_str(buf, len, "%s %s entry 0x%08lX\n", ts, ss,
 			(unsigned long)t->func_addr);
+#endif
 		break;
 	case TRIGGER_FUNC_EXIT:
+#if BITS_PER_LONG == 64
+		dump_str(buf, len, "%s %s exit 0x%016lX\n", ts, ss,
+			(unsigned long)t->func_addr);
+#else
 		dump_str(buf, len, "%s %s exit 0x%08lX\n", ts, ss,
 			(unsigned long)t->func_addr);
+#endif
 		break;
 	case TRIGGER_NONE:
 		dump_str(buf, len, "%s %s not set\n", ts, ss);

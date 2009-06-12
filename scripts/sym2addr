@@ -15,7 +15,7 @@ for word in `cat $infile` ; do
 		new|begin|trigger|start|stop|entry|exit|time|filter|mintime|maxtime|noints|onlyints|0|funclist|fend)
 			;;
 		*)
-			addr=`grep " ${word}$" $mapfile | cut -b 1-8`
+			addr=`grep " ${word}$" $mapfile | cut -d ' ' -f1`
 			if [ -n "$addr" ]; then
 				word="0x$addr"
 			fi
