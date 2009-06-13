@@ -45,7 +45,7 @@ static int loongson2f_cpu_freq_notifier(struct notifier_block *nb,
 					unsigned long val, void *data)
 {
 	if (val == CPUFREQ_POSTCHANGE)
-		__udelay_val = loops_per_jiffy;
+		current_cpu_data.udelay_val = loops_per_jiffy;
 
 	return 0;
 }
