@@ -27,7 +27,6 @@
 	.macro MCOUNT_SAVE_REGS
 	PTR_SUBU	sp, PT_SIZE
 	PTR_S	ra, PT_R31(sp)
-	PTR_S	AT, PT_R1(sp)
 	PTR_S	a0, PT_R4(sp)
 	PTR_S	a1, PT_R5(sp)
 	PTR_S	a2, PT_R6(sp)
@@ -42,7 +41,6 @@
 
 	.macro MCOUNT_RESTORE_REGS
 	PTR_L	ra, PT_R31(sp)
-	PTR_L	AT, PT_R1(sp)
 	PTR_L	a0, PT_R4(sp)
 	PTR_L	a1, PT_R5(sp)
 	PTR_L	a2, PT_R6(sp)
@@ -81,6 +79,7 @@ NESTED(ftrace_caller, PT_SIZE, ra)
 	nop
 
 	MCOUNT_SAVE_REGS
+	PTR_S	AT, PT_R1(sp)
 
 	MCOUNT_SET_ARGS
 	.globl ftrace_call
@@ -88,7 +87,16 @@ ftrace_call:
 	jal	ftrace_stub
 	nop
 
+	PTR_L	AT, PT_R1(sp)
 	MCOUNT_RESTORE_REGS
+
+#ifdef CONFIG_FUNCTION_GRAPH_TRACER
+	.globl ftrace_graph_call
+ftrace_graph_call:
+	j	ftrace_stub
+	nop
+#endif
+
 	.globl ftrace_stub
 ftrace_stub:
 	RETURN_BACK
@@ -106,17 +114,27 @@ NESTED(_mcount, PT_SIZE, ra)
 	PTR_L	t1, ftrace_trace_function /* please don't use t1 later, safe? */
 	bne	t0, t1, static_trace
 	nop
-
+#ifdef	CONFIG_FUNCTION_GRAPH_TRACER
+	PTR_L	t2, ftrace_graph_return
+	bne	t0,	t2, ftrace_graph_caller
+	nop
+	PTR_LA	t0, ftrace_graph_entry_stub
+	PTR_L	t2, ftrace_graph_entry
+	bne	t0,	t2, ftrace_graph_caller
+	nop
+#endif
 	j	ftrace_stub
 	nop
 
 static_trace:
 	MCOUNT_SAVE_REGS
+	PTR_S	AT, PT_R1(sp)
 
 	MCOUNT_SET_ARGS			/* call *ftrace_trace_function */
 	jalr	t1
 	nop
 
+	PTR_L	AT, PT_R1(sp)
 	MCOUNT_RESTORE_REGS
 	.globl ftrace_stub
 ftrace_stub:
@@ -124,6 +142,43 @@ ftrace_stub:
 	END(_mcount)
 
 #endif	/* ! CONFIG_DYNAMIC_FTRACE */
+
+#ifdef CONFIG_FUNCTION_GRAPH_TRACER
+
+NESTED(ftrace_graph_caller, PT_SIZE, ra)
+	MCOUNT_SAVE_REGS
+	PTR_S	v0, PT_R2(sp)
+
+	MCOUNT_SET_ARGS
+	jal	prepare_ftrace_return
+	nop
+
+	/* overwrite the parent as &return_to_handler: v0 -> AT */
+	move	AT,	v0
+
+	PTR_L	v0, PT_R2(sp)
+	MCOUNT_RESTORE_REGS
+	RETURN_BACK
+	END(ftrace_graph_caller)
+
+	.align	2
+	.globl	return_to_handler
+return_to_handler:
+	PTR_SUBU	sp, PT_SIZE
+	PTR_S	v0, PT_R2(sp)
+
+	jal	ftrace_return_to_handler
+	nop
+
+	/* restore the real parent address: v0 -> ra */
+	move	ra, v0
+
+	PTR_L	v0, PT_R2(sp)
+	PTR_ADDIU	sp, PT_SIZE
+
+	jr	ra
+
+#endif /* CONFIG_FUNCTION_GRAPH_TRACER */
 
 	.set at
 	.set reorder
