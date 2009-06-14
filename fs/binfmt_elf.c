@@ -1193,7 +1193,7 @@ static unsigned long vma_dump_size(struct vm_area_struct *vma,
 	if (FILTER(ELF_HEADERS) &&
 	    vma->vm_pgoff == 0 && (vma->vm_flags & VM_READ)) {
 		u32 __user *header = (u32 __user *) vma->vm_start;
-		u32 word;
+		static u32 word;
 		mm_segment_t fs = get_fs();
 		/*
 		 * Doing it this way gets the constant folded by GCC.

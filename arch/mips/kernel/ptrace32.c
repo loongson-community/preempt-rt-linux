@@ -63,7 +63,7 @@ long compat_arch_ptrace(struct task_struct *child, compat_long_t request,
 	case PTRACE_PEEKDATA_3264: {
 		u32 tmp;
 		int copied;
-		u32 __user * addrOthers;
+		static u32 __user * addrOthers;
 
 		ret = -EIO;
 
@@ -206,7 +206,7 @@ long compat_arch_ptrace(struct task_struct *child, compat_long_t request,
 	 */
 	case PTRACE_POKETEXT_3264:
 	case PTRACE_POKEDATA_3264: {
-		u32 __user * addrOthers;
+		static u32 __user * addrOthers;
 
 		/* Get the addr in the other process that we want to write into */
 		ret = -EIO;

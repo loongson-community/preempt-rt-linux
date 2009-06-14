@@ -1231,7 +1231,7 @@ int fpu_emulator_cop1Handler(struct pt_regs *xcp, struct mips_fpu_struct *ctx,
 	int has_fpu)
 {
 	unsigned long oldepc, prevepc;
-	mips_instruction insn;
+	static mips_instruction insn;
 	int sig = 0;
 
 	oldepc = xcp->cp0_epc;
