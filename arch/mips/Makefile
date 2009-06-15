@@ -120,8 +120,9 @@ cflags-$(CONFIG_CPU_VR41XX)	+= -march=r4100 -Wa,--trap
 cflags-$(CONFIG_CPU_R4X00)	+= -march=r4600 -Wa,--trap
 cflags-$(CONFIG_CPU_TX49XX)	+= -march=r4600 -Wa,--trap
 
+# -mfix-ls2f-kernel is in the loongson-specific patch for gas of binutils
+cflags-$(CONFIG_CPU_LOONGSON2)	+= -Wa,$(call as-option,-mfix-ls2f-kernel),--trap
 # only gcc >= 4.4 have the loongson-specific support
-cflags-$(CONFIG_CPU_LOONGSON2)	+= -Wa,--trap
 cflags-$(CONFIG_CPU_LOONGSON2E) += \
 	$(call cc-option,-march=loongson2e,-march=r4600) $(call cc-option,-mtune=loongson2e)
 cflags-$(CONFIG_CPU_LOONGSON2F) += \
