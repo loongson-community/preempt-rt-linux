@@ -125,9 +125,9 @@ cflags-$(CONFIG_CPU_TX49XX)	+= -march=r4600 -Wa,--trap
 cflags-$(CONFIG_CPU_LOONGSON2)	+= -Wa,$(call as-option,-mfix-ls2f-kernel),--trap
 # only gcc >= 4.4 have the loongson-specific support
 cflags-$(CONFIG_CPU_LOONGSON2E) += \
-	$(call cc-option,-march=loongson2e,-march=r4600) $(call cc-option,-mtune=loongson2e)
+	$(call cc-option,-march=loongson2e,-march=r4600)
 cflags-$(CONFIG_CPU_LOONGSON2F) += \
-	$(call cc-option,-march=loongson2f,-march=r4600) $(call cc-optoin,-mtune=loongson2f)
+	$(call cc-option,-march=loongson2f,-march=r4600)
 
 cflags-$(CONFIG_CPU_MIPS32_R1)	+= $(call cc-option,-march=mips32,-mips32 -U_MIPS_ISA -D_MIPS_ISA=_MIPS_ISA_MIPS32) \
 			-Wa,-mips32 -Wa,--trap
