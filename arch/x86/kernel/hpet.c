@@ -341,7 +341,6 @@ static void hpet_set_mode(enum clock_event_mode mode,
 		 */
 		hpet_writel((unsigned long) delta, HPET_Tn_CMP(timer));
 		hpet_start_counter();
-		hpet_print_config();
 		break;
 
 	case CLOCK_EVT_MODE_ONESHOT:
