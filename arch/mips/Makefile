@@ -174,7 +174,6 @@ libs-$(CONFIG_ARC)		+= arch/mips/fw/arc/
 libs-$(CONFIG_CFE)		+= arch/mips/fw/cfe/
 libs-$(CONFIG_SNIPROM)		+= arch/mips/fw/sni/
 libs-y				+= arch/mips/fw/lib/
-libs-$(CONFIG_SIBYTE_CFE)	+= arch/mips/sibyte/cfe/
 
 #
 # Board-dependent options and extra files
@@ -191,7 +190,6 @@ load-$(CONFIG_MACH_JAZZ)	+= 0xffffffff80080000
 # Common Alchemy Au1x00 stuff
 #
 core-$(CONFIG_SOC_AU1X00)	+= arch/mips/alchemy/common/
-cflags-$(CONFIG_SOC_AU1X00)	+= -I$(srctree)/arch/mips/include/asm/mach-au1x00
 
 #
 # AMD Alchemy Pb1000 eval board
@@ -288,6 +286,10 @@ load-$(CONFIG_MIPS_MTX1)	+= 0xffffffff80100000
 #
 libs-$(CONFIG_MIPS_XXS1500)	+= arch/mips/alchemy/xxs1500/
 load-$(CONFIG_MIPS_XXS1500)	+= 0xffffffff80100000
+
+# must be last for Alchemy systems for GPIO to work properly
+cflags-$(CONFIG_SOC_AU1X00)	+= -I$(srctree)/arch/mips/include/asm/mach-au1x00
+
 
 #
 # Cobalt Server

@@ -1,7 +1,7 @@
 /*
- * Hibernation support for mips - temporary page tables
+ * Hibernation support specific for mips - temporary page tables
  *
- * Distributed under GPLv2
+ * Licensed under the GPLv2
  *
  * Copyright (C) 2009 Lemote Inc. & Insititute of Computing Technology
  * Author: Hu Hongbing <huhb@lemote.com>
