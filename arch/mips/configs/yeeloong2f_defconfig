@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.29.3
-# Thu May 21 00:06:26 2009
+# Linux kernel version: 2.6.29.5
+# Tue Jun 30 13:39:12 2009
 #
 CONFIG_MIPS=y
 
@@ -16,6 +16,7 @@ CONFIG_MIPS=y
 # CONFIG_MACH_JAZZ is not set
 # CONFIG_LASAT is not set
 CONFIG_LOONGSON_SYSTEMS=y
+# CONFIG_LEMOTE_FULONG is not set
 # CONFIG_MIPS_MALTA is not set
 # CONFIG_MIPS_SIM is not set
 # CONFIG_NEC_MARKEINS is not set
@@ -314,7 +315,7 @@ CONFIG_PM_SLEEP=y
 CONFIG_SUSPEND=y
 CONFIG_SUSPEND_FREEZER=y
 CONFIG_HIBERNATION=y
-CONFIG_PM_STD_PARTITION=""
+CONFIG_PM_STD_PARTITION="/dev/hda3"
 
 #
 # CPU Frequency scaling
