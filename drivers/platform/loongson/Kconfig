@@ -41,4 +41,28 @@ config EC_KB3310B_DEBUG
 
 	  The original git repository is: http://dev.lemote.com/code/ec_module
 
+config PMON_FLASH
+	tristate "MTD map driver for flushing PMON in Linux"
+	depends on MTD && MTD_PARTITIONS
+	default y
+	---help---
+	  This is a driver for flushing the bootloader(pmon) of
+	  fuloong2e,fuloong2f,yeeloong2f in Linux.
+
+	  Here is a basic usage:
+
+	  1. load necessary modules
+
+	  	$ modprobe mtd
+		$ modprobe mtdblock
+		$ modprobe pmon_flashd
+
+	  2. read the flash
+
+	  	$ dd if=/dev/mtdblock0 of=pmon.bin
+
+	  3. write the falsh
+
+	  	$ dd if=pmon.bin of=/dev/mtdblock0
+
 endif # LOONGSON_PLATFORM_DEVICES
