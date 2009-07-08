@@ -1,0 +1,44 @@
+#
+# Loongson Platform Specific Drivers
+#
+
+menuconfig LOONGSON_PLATFORM_DEVICES
+	bool "Loongson Platform Specific Device Drivers"
+	default y
+	---help---
+	  Say Y here to get to see options for device drivers for various
+	  loongson platforms, including vendor-specific laptop extension drivers.
+	  This option alone does not add any kernel code.
+
+	  If you say N, all options in this submenu will be skipped and disabled.
+
+if LOONGSON_PLATFORM_DEVICES
+
+config EC_KB3310B
+	tristate "Embedded Controller: Kb3310b support"
+	depends on LEMOTE_YEELOONG2F
+	default y
+	---help---
+	  This is a driver for yeeloong laptops. It adds the kb3310b support:
+	  i.e. battery management, fan & temperature mangement, sci event
+	  management and ec rom flushing.
+
+	  This driver is orignally written by Liu junliang <liujl@lemote.com>
+	  and maintained by huangwei <huangw@lemote.com> currently.
+
+	  The original git repository is: http://dev.lemote.com/code/ec_module
+
+config EC_KB3310B_DEBUG
+	tristate "Embedded Controller: Kb3310b debug support"
+	depends on EC_KB3310B
+	default n
+	---help---
+	  This is a driver for yeeloong laptops. It adds the kb3310b debug
+	  support.
+
+	  This driver is orignally written by Liu junliang <liujl@lemote.com>
+	  and maintained by huangwei <huangw@lemote.com> currently.
+
+	  The original git repository is: http://dev.lemote.com/code/ec_module
+
+endif # LOONGSON_PLATFORM_DEVICES
