@@ -4,6 +4,6 @@ if X86
 source "drivers/platform/x86/Kconfig"
 endif
 
-if MACH_LOONGSON
+if LOONGSON_SYSTEMS
 source "drivers/platform/loongson/Kconfig"
 endif
