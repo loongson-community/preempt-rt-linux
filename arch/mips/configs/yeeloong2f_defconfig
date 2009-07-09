@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.29.5
-# Tue Jun 30 13:39:12 2009
+# Linux kernel version: 2.6.29.6
+# Thu Jul  9 10:01:35 2009
 #
 CONFIG_MIPS=y
 
@@ -832,12 +832,13 @@ CONFIG_FIRMWARE_IN_KERNEL=y
 CONFIG_EXTRA_FIRMWARE=""
 # CONFIG_SYS_HYPERVISOR is not set
 CONFIG_CONNECTOR=m
-CONFIG_MTD=m
+CONFIG_MTD=y
 # CONFIG_MTD_DEBUG is not set
 CONFIG_MTD_CONCAT=m
 CONFIG_MTD_PARTITIONS=y
 # CONFIG_MTD_TESTS is not set
 # CONFIG_MTD_REDBOOT_PARTS is not set
+# CONFIG_MTD_CMDLINE_PARTS is not set
 # CONFIG_MTD_AR7_PARTS is not set
 
 #
@@ -2222,6 +2223,10 @@ CONFIG_RTC_DRV_CMOS=y
 # CONFIG_DMADEVICES is not set
 # CONFIG_UIO is not set
 # CONFIG_STAGING is not set
+CONFIG_LOONGSON_PLATFORM_DEVICES=y
+CONFIG_EC_KB3310B=y
+# CONFIG_EC_KB3310B_DEBUG is not set
+CONFIG_PMON_FLASH=y
 
 #
 # File systems
