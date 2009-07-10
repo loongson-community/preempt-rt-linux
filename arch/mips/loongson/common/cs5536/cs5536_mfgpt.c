@@ -105,7 +105,7 @@ static int mfgpt_next_event(unsigned long delta, struct clock_event_device *evt)
 
 static struct clock_event_device mfgpt_clockevent = {
 	.name = "mfgpt",
-	.features = CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_MODE_ONESHOT,
+	.features = CLOCK_EVT_FEAT_PERIODIC,
 	.set_mode = init_mfgpt_timer,
 	.set_next_event = mfgpt_next_event,
 	.irq = CS5536_MFGPT_INTR,
