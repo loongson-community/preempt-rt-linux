@@ -17,7 +17,7 @@ Notes:
 --*/
 
 /*--------------------------Include File------------------------------------*/
-#include "ieee80211.h"
+#include "ieee80211/ieee80211.h"
 #include "r8180_hw.h"
 #include "r8187.h"
 #include "r8180_93cx6.h" 

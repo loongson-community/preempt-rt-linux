@@ -15,7 +15,7 @@
 #include <linux/timer.h>
 #include <linux/sched.h>
 
-#include "ieee80211.h" // for struct ieee80211-xxxx
+#include "ieee80211/ieee80211.h" // for struct ieee80211-xxxx
 #include "r8187.h" // for struct r8180-priv
 
 #define MAC_TABLE_SIZE	8

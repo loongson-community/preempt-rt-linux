@@ -1,7 +1,7 @@
 #ifndef __INC_DOT11D_H
 #define __INC_DOT11D_H
 
-#include "ieee80211.h"
+#include "ieee80211/ieee80211.h"
 
 //#define ENABLE_DOT11D
 

@@ -48,7 +48,7 @@
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27)
 #include <asm/semaphore.h>
 #endif
-#include "ieee80211.h"
+#include "ieee80211/ieee80211.h"
 #ifdef _RTL8187_EXT_PATCH_
 #include "msh_class.h"
 #endif
