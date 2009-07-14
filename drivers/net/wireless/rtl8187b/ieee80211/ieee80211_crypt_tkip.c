@@ -982,6 +982,8 @@ void ieee80211_tkip_null(void)
 //    printk("============>%s()\n", __FUNCTION__);
         return;
 }
+
+#if 0
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2,5,0))
 EXPORT_SYMBOL(ieee80211_tkip_null);
 #else
@@ -991,3 +993,4 @@ EXPORT_SYMBOL_NOVERS(ieee80211_tkip_null);
 
 module_init(ieee80211_crypto_tkip_init);
 module_exit(ieee80211_crypto_tkip_exit);
+#endif

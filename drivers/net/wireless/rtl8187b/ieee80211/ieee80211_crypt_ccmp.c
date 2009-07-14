@@ -512,7 +512,7 @@ static void __exit ieee80211_crypto_ccmp_exit(void)
 {
 	ieee80211_unregister_crypto_ops(&ieee80211_crypt_ccmp);
 }
-
+#if 0
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2,5,0))
 EXPORT_SYMBOL(ieee80211_ccmp_null);
 #else
@@ -521,3 +521,4 @@ EXPORT_SYMBOL_NOVERS(ieee80211_ccmp_null);
 
 module_init(ieee80211_crypto_ccmp_init);
 module_exit(ieee80211_crypto_ccmp_exit);
+#endif
