@@ -209,7 +209,7 @@ static struct ieee80211_crypto_ops ieee80211_crypt_null = {
 };
 
 
-static int __init ieee80211_crypto_init(void)
+int __init ieee80211_crypto_init(void)
 {
 	int ret = -ENOMEM;
 
@@ -231,7 +231,7 @@ out:
 }
 
 
-static void __exit ieee80211_crypto_deinit(void)
+void __exit ieee80211_crypto_deinit(void)
 {
 	struct list_head *ptr, *n;
 

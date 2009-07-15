@@ -6915,9 +6915,41 @@ static void __devexit rtl8187_usb_disconnect(struct usb_device *udev, void *ptr)
 	DMESG("wlan driver removed");
 }
 
+/* fun with the built-in ieee80211 stack... */
+extern int ieee80211_crypto_init(void);
+extern void ieee80211_crypto_deinit(void);
+extern int ieee80211_crypto_tkip_init(void);
+extern void ieee80211_crypto_tkip_exit(void);
+extern int ieee80211_crypto_ccmp_init(void);
+extern void ieee80211_crypto_ccmp_exit(void);
+extern int ieee80211_crypto_wep_init(void);
+extern void ieee80211_crypto_wep_exit(void);
 
 static int __init rtl8187_usb_module_init(void)
 {
+	int ret;
+
+	ret = ieee80211_crypto_init();
+	if (ret) {
+		printk(KERN_ERR "ieee80211_crypto_init() failed %d\n", ret);
+		return ret;
+	}
+	ret = ieee80211_crypto_tkip_init();
+	if (ret) {
+		printk(KERN_ERR "ieee80211_crypto_tkip_init() failed %d\n", ret);
+		return ret;
+	}
+	ret = ieee80211_crypto_ccmp_init();
+	if (ret) {
+		printk(KERN_ERR "ieee80211_crypto_ccmp_init() failed %d\n", ret);
+		return ret;
+	}
+	ret = ieee80211_crypto_wep_init();
+	if (ret) {
+		printk(KERN_ERR "ieee80211_crypto_wep_init() failed %d\n", ret);
+		return ret;
+	}
+
 	printk("\nLinux kernel driver for RTL8187/RTL8187B based WLAN cards\n");
 	printk("Copyright (c) 2004-2008, Realsil Wlan\n");
 	DMESG("Initializing module");
@@ -6930,8 +6962,12 @@ static int __init rtl8187_usb_module_init(void)
 static void __exit rtl8187_usb_module_exit(void)
 {
 	usb_deregister(&rtl8187_usb_driver);
-
 	rtl8180_proc_module_remove();
+	ieee80211_crypto_tkip_exit();
+	ieee80211_crypto_ccmp_exit();
+	ieee80211_crypto_wep_exit();
+	ieee80211_crypto_deinit();
+
 	DMESG("Exiting\n");
 }
 
