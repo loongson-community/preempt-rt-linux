@@ -143,7 +143,7 @@ static int i8042_wait_write(void)
  * of the i8042 down the toilet.
  */
 
-static int i8042_flush(void)
+int i8042_flush(void)
 {
 	unsigned long flags;
 	unsigned char data, str;

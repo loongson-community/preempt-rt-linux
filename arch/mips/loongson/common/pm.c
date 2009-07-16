@@ -24,6 +24,7 @@ extern void prom_printf(char *fmt, ...);
 
 /* i8042 keyboard operations: drivers/input/serio/i8042.c */
 extern int i8042_enable_kbd_port(void);
+extern void i8042_flush(void);
 
 static unsigned int cached_master_mask;	/* i8259A */
 static unsigned int cached_slave_mask;
@@ -83,7 +84,12 @@ static void loongson_cpu_idle(void)
 
 	cached_cpu_freq = LOONGSON_CHIPCFG0;
 
+	/* handle the old delayed kbd interrupt */
 	LOONGSON_CHIPCFG0 &= ~0x7;	/* Put CPU into wait mode */
+	i8042_flush();
+
+	/* handle the real wakeup interrupt */
+	LOONGSON_CHIPCFG0 &= ~0x7;
 	mmiowb();
 
 	LOONGSON_CHIPCFG0 = cached_cpu_freq;
