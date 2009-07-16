@@ -393,7 +393,7 @@ static irqreturn_t i8042_interrupt(int irq, void *dev_id)
  * i8042_enable_kbd_port enables keybaord port on chip
  */
 
-static int i8042_enable_kbd_port(void)
+int i8042_enable_kbd_port(void)
 {
 	i8042_ctr &= ~I8042_CTR_KBDDIS;
 	i8042_ctr |= I8042_CTR_KBDINT;
