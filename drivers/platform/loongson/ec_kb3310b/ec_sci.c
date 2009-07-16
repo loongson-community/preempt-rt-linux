@@ -95,7 +95,7 @@ static const struct file_operations sci_proc_fops = {
 	.write = sci_proc_write,
 };
 
-#define	SCI_ACTION_COUNT	11
+#define	SCI_ACTION_COUNT	15
 #define	SCI_ACTION_WIDTH	14
 char sci_action[SCI_ACTION_COUNT][SCI_ACTION_WIDTH] = {
 	"DISPLAY : LCD",
@@ -107,6 +107,10 @@ char sci_action[SCI_ACTION_COUNT][SCI_ACTION_WIDTH] = {
 	"MACHINE : RES",
 	"CAMERA : ON",
 	"CAMERA : OFF",
+	"LCDLED : ON",
+	"LCDLED : OFF",
+	"LCDBL : ON",
+	"LCDBL : OFF",
 	"NONE",
 	"NONE"
 };
@@ -121,6 +125,10 @@ static enum {
 	CMD_MACHINE_RESET,
 	CMD_CAMERA_ON,
 	CMD_CAMERA_OFF,
+	CMD_LCDLED_PWRON,
+	CMD_LCDLED_PWROFF,
+	CMD_LCDBL_ON,
+	CMD_LCDBL_OFF,
 	CMD_NONE
 } sci_cmd;
 
@@ -179,6 +187,41 @@ static void sci_display_all(void)
 	value = (value & 0xf8) | 0x03;
 	outb(0x31, 0x3c4);
 	outb(value, 0x3c5);
+
+	return;
+}
+
+static void sci_lcd_op(unsigned char flag)
+{
+	unsigned char value;
+
+	/* default display crt */
+	outb(0x21, 0x3c4);
+	value = inb(0x3c5);
+	value &= ~(1 << 7);
+	outb(0x21, 0x3c4);
+	outb(value, 0x3c5);
+
+	if (flag == CMD_LCDLED_PWRON) {
+		/* open lcd output */
+		outb(0x31, 0x3c4);
+		value = inb(0x3c5);
+		value = (value & 0xf8) | 0x03;
+		outb(0x31, 0x3c4);
+		outb(value, 0x3c5);
+	} else if (flag == CMD_LCDLED_PWROFF) {
+		/* close lcd output */
+		outb(0x31, 0x3c4);
+		value = inb(0x3c5);
+		value = (value & 0xf8) | 0x02;
+		outb(0x31, 0x3c4);
+		outb(value, 0x3c5);
+	} else if (flag == CMD_LCDBL_ON)
+		/* LCD backlight on */
+		ec_write(REG_BACKLIGHT_CTRL, BIT_BACKLIGHT_ON);
+	else if (flag == CMD_LCDBL_OFF)
+		/* LCD backlight off */
+		ec_write(REG_BACKLIGHT_CTRL, BIT_BACKLIGHT_OFF);
 
 	return;
 }
@@ -387,6 +430,22 @@ static ssize_t sci_proc_write(struct file *file, const char *buf, size_t len,
 	case CMD_CAMERA_OFF:
 		sci_camera_on_off();
 		PRINTK_DBG(KERN_DEBUG "CMD_CAMERA_OFF");
+		break;
+	case CMD_LCDLED_PWRON:
+		sci_lcd_op(CMD_LCDLED_PWRON);
+		PRINTK_DBG(KERN_DEBUG "CMD_LCDLED_PWRON");
+		break;
+	case CMD_LCDLED_PWROFF:
+		sci_lcd_op(CMD_LCDLED_PWROFF);
+		PRINTK_DBG(KERN_DEBUG "CMD_LCDLED_PWROFF");
+		break;
+	case CMD_LCDBL_ON:
+		sci_lcd_op(CMD_LCDBL_ON);
+		PRINTK_DBG(KERN_DEBUG "CMD_LCDBL_ON");
+		break;
+	case CMD_LCDBL_OFF:
+		sci_lcd_op(CMD_LCDBL_OFF);
+		PRINTK_DBG(KERN_DEBUG "CMD_LCDBL_OFF");
 		break;
 	default:
 		printk(KERN_ERR "EC SCI : Not supported cmd.\n");

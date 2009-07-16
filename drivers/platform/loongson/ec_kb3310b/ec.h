@@ -149,6 +149,9 @@
 #define	REG_DISPLAY_LCD				0xF79F	/* Black screen Status */
 #define	BIT_DISPLAY_LCD_ON				(1 << 0)
 #define	BIT_DISPLAY_LCD_OFF				(0 << 0)
+#define	REG_BACKLIGHT_CTRL			0xF7BD	/* LCD backlight control: off/restore */
+#define	BIT_BACKLIGHT_ON				(1 << 0)
+#define	BIT_BACKLIGHT_OFF				(0 << 0)
 
 /* SCI Event Number from EC */
 #define	SCI_EVENT_NUM_LID				0x23	/*  press the lid or not */
