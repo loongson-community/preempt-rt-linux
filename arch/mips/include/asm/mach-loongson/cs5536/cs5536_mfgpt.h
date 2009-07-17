@@ -7,6 +7,7 @@
 
 #include <cs5536/cs5536.h>
 
+extern u32 mfgpt_base;
 extern void setup_mfgpt_timer(void);
 
 #if 1

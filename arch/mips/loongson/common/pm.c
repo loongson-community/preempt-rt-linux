@@ -19,6 +19,8 @@
 
 #include <loongson.h>
 
+#include <cs5536/cs5536_mfgpt.h>
+
 /* debug functions */
 extern void prom_printf(char *fmt, ...);
 
@@ -96,8 +98,24 @@ static void loongson_cpu_idle(void)
 	mmiowb();
 }
 
+static void arch_suspend(void)
+{
+	/* stop counting of cs5536 mfgpt timer */
+	outw(inw(MFGPT0_SETUP) | (1 << 11) , MFGPT0_SETUP);
+}
+
+static void arch_resume(void)
+{
+	/* enable counting of cs5536 mfgpt timer */
+	outw(inw(MFGPT0_SETUP) & ~(1 << 11) , MFGPT0_SETUP);
+}
+
 static int loongson_pm_enter(suspend_state_t state)
 {
+	prom_printf("suspend: try to call arch specific suspend\n");
+
+	arch_suspend();
+
 	prom_printf("suspend: try to setup the wakeup interrupt (keyboard interrupt)\n");
 
 	setup_wakeup_interrupt();
@@ -107,6 +125,10 @@ static int loongson_pm_enter(suspend_state_t state)
 	loongson_cpu_idle();
 
 	prom_printf("resume: waked up from wait mode of loongson cpu\n");
+
+	arch_resume();
+
+	prom_printf("resume: return from arch specific resume\n");
 
 	return 0;
 }

@@ -30,7 +30,7 @@
 DEFINE_SPINLOCK(mfgpt_lock);
 EXPORT_SYMBOL(mfgpt_lock);
 
-static u32 mfgpt_base;
+u32 mfgpt_base;
 
 /*
  * Initialize the MFGPT timer.
