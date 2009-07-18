@@ -34,9 +34,4 @@ obj-$(CONFIG_LOONGSON2F_CPU_FREQ) += clock.o
 #
 obj-$(CONFIG_SERIAL_8250) += serial.o
 
-#
-# Power Management Support
-#
-
-obj-$(CONFIG_PM) += pm.o
 EXTRA_CFLAGS += -Werror
