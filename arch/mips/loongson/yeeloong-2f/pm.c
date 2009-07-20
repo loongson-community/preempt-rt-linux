@@ -19,7 +19,9 @@
 
 #include <loongson.h>
 
+#ifdef CONFIG_CS5536_MFGPT
 #include <cs5536/cs5536_mfgpt.h>
+#endif
 
 /* debug functions */
 extern void prom_printf(char *fmt, ...);
@@ -100,14 +102,18 @@ static void loongson_cpu_idle(void)
 
 static void arch_suspend(void)
 {
+#ifdef CONFIG_CS5536_MFGPT
 	/* stop counting of cs5536 mfgpt timer */
 	outw(inw(MFGPT0_SETUP) | (1 << 11) , MFGPT0_SETUP);
+#endif
 }
 
 static void arch_resume(void)
 {
+#ifdef CONFIG_CS5536_MFGPT
 	/* enable counting of cs5536 mfgpt timer */
 	outw(inw(MFGPT0_SETUP) & ~(1 << 11) , MFGPT0_SETUP);
+#endif
 }
 
 static int loongson_pm_enter(suspend_state_t state)
