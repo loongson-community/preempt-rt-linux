@@ -70,15 +70,6 @@ static struct irqaction cascade_irqaction = {
 	.name = "cascade",
 };
 
-/*
- * fuloong2f and yeeloong2f share the cpu perf counter interrupt and the north
- * bridge interrupt in IP6, so, the ip6_irqaction should be sharable.
- * otherwise, we will can not request the perf counter irq(setup the perf
- * counter irq handler) in op_model_loongson2.c.
- */
-
-#if defined(CONFIG_OPROFILE) && \
-	(defined(CONFIG_LEMOTE_FULOONG2F) || defined(CONFIG_LEMOTE_YEELOONG2F))
 irqreturn_t ip6_action(int cpl, void *dev_id)
 {
 	return IRQ_HANDLED;
@@ -89,9 +80,6 @@ static struct irqaction ip6_irqaction = {
 	.name = "cascade",
 	.flags = IRQF_SHARED,
 };
-#else
-#define	ip6_irqaction	cascade_irqaction
-#endif
 
 void __init arch_init_irq(void)
 {
