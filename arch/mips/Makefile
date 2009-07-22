@@ -312,8 +312,9 @@ cflags-$(CONFIG_WR_PPMC)		+= -I$(srctree)/arch/mips/include/asm/mach-wrppmc
 load-$(CONFIG_WR_PPMC)		+= 0xffffffff80100000
 
 #
-# lemote fulong mini-PC board
+# loongson family machines
 #
+all-$(CONFIG_CPU_LOONGSON2F) += bzImage
 core-$(CONFIG_MACH_LOONGSON) +=arch/mips/loongson/
 cflags-$(CONFIG_MACH_LOONGSON) += -I$(srctree)/arch/mips/include/asm/mach-loongson \
 					-mno-branch-likely
@@ -734,6 +735,14 @@ ifdef CONFIG_MIPS32_O32
 	$(Q)$(MAKE) $(build)=. missing-syscalls EXTRA_CFLAGS="-mabi=32"
 endif
 
+zboot := arch/mips/zboot
+bzImage: KBUILD_IMAGE := arch/mips/zboot/bzImage
+
+BOOT_TARGETS = bzImage
+
+$(BOOT_TARGETS):  vmlinux
+	$(Q)$(MAKE) $(build)=$(zboot) $(KBUILD_IMAGE) ZBOOT_FLAGS=$(CFLAGS)
+
 install:
 	$(Q)install -D -m 755 vmlinux $(INSTALL_PATH)/vmlinux-$(KERNELRELEASE)
 	$(Q)install -D -m 644 .config $(INSTALL_PATH)/config-$(KERNELRELEASE)
@@ -741,7 +750,9 @@ install:
 
 archclean:
 	@$(MAKE) $(clean)=arch/mips/boot
+	@$(MAKE) $(clean)=arch/mips/zboot
 	@$(MAKE) $(clean)=arch/mips/lasat
+	
 
 define archhelp
 	echo '  install              - install kernel into $(INSTALL_PATH)'
