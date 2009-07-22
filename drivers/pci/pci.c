@@ -497,18 +497,8 @@ static int pci_raw_set_power_state(struct pci_dev *dev, pci_power_t state)
 
 	/* Mandatory power management transition delays */
 	/* see PCI PM 1.1 5.6.1 table 18 */
-
-	/* we can not call msleep() when resume:
-	 *
-	 *   if the current_state is PCI_D3hot, means we are in the procedure
-	 *   of resuming, in this procedure, we can not re-schedule, otherwise,
-	 *   there will be a deadlock.
-	 */
-
-	if (state == PCI_D3hot)
+	if (state == PCI_D3hot || dev->current_state == PCI_D3hot)
 		msleep(pci_pm_d3_delay);
-	else if (dev->current_state == PCI_D3hot)
-		udelay(pci_pm_d3_delay);
 	else if (state == PCI_D2 || dev->current_state == PCI_D2)
 		udelay(PCI_PM_D2_DELAY);
 
