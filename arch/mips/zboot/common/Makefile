@@ -8,13 +8,14 @@
 # Tom Rini	January 2001
 #
 
-CFLAGS :=$(CFLAGS) -fno-builtin
+EXTRA_CFLAGS := -fno-builtin -I$(TOPDIR)/arch/mips/zboot/include -I$(TOPDIR)/arch/$(ARCH)/zboot/common/include
+
 .c.s:
-	$(CC) $(CFLAGS) -S -o $*.s $<
+	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -S -o $*.s $<
 .s.o:
 	$(AS) -o $*.o $<
 .c.o:
-	$(CC) $(CFLAGS) -c -o $*.o $<
+	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -c -o $*.o $<
 .S.s:
 	$(CPP) $(AFLAGS) -o $*.o $<
 .S.o:

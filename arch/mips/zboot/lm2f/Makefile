@@ -25,7 +25,7 @@ BNAME=lm2f
 # file is generated, the code is the same.
 ZBOOT_CFLAGS := -fno-pic -pipe -msoft-float -ffreestanding  -march=r4600 -Wa,--trap -G 0 -mno-abicalls  
 ZBOOT_CFLAGS += -D__KERNEL__
-ZBOOT_CFLAGS += -I$(TOPDIR)/include -I$(TOPDIR)/arch/mips/include -I$(TOPDIR)/arch/mips/include/asm/mach-loongson/ -I$(TOPDIR)/arch/mips/include/asm/ -I$(TOPDIR)/arch/mips/include/asm/mach-generic -I$(TOPDIR)/arch/mips/zboot/include
+ZBOOT_CFLAGS += -I$(TOPDIR)/include -I$(TOPDIR)/arch/mips/include -I$(TOPDIR)/arch/mips/include/asm/mach-loongson/ -I$(TOPDIR)/arch/mips/include/asm/ -I$(TOPDIR)/arch/mips/include/asm/mach-generic -I$(TOPDIR)/arch/mips/zboot/include -I$(objtree)/include
 ZBOOT_CFLAGS += -fno-builtin -isystem
 ZBOOT_AFLAGS := -fno-pic -pipe -msoft-float -ffreestanding  -march=r4600 -Wa,--trap 
 
@@ -50,19 +50,19 @@ OBJECTS := $(obj)/head.o $(obj)/../common/misc-common.o $(obj)/../common/misc-si
 		$(obj)/ns16550.o $(obj)/../common/ctype.o $(obj)/../lib/zlib.o \
 		$(obj)/../common/string.o
 
-ENTRY := $(obj)/../utils/entry
-OFFSET := ../utils/offset
-SIZE := ../utils/size
+ENTRY := $(TOPDIR)/arch/mips/zboot/utils/entry
+OFFSET := $(TOPDIR)/arch/mips/zboot/utils/offset
+SIZE := $(TOPDIR)/arch/mips/zboot/utils/size
 
-LD_ARGS := -T $(obj)/../ld.script -Ttext $(RAM_RUN_ADDR) -Bstatic
+LD_ARGS := -T $(TOPDIR)/arch/mips/zboot/ld.script -Ttext $(RAM_RUN_ADDR) -Bstatic
 OBJCOPY_ARGS = -O elf32-tradlittlemips
 
 all: bzImage
 
 
-$(obj)/head.o:  $(obj)/head.S $(TOPDIR)/vmlinux
+$(obj)/head.o:  $(obj)/head.S $(objtree)/vmlinux
 	$(Q)$(CC) $(ZBOOT_CFLAGS) -I$(TOPDIR)/include -D__ASSEMBLY__ \
-	  -DKERNEL_ENTRY=$(shell sh $(ENTRY) $(NM) $(TOPDIR)/vmlinux )	-c -o $@ $<
+	  -DKERNEL_ENTRY=$(shell sh $(ENTRY) $(NM) $(objtree)/vmlinux )	-c -o $@ $<
 
 $(obj)/../common/misc-common.o:  $(obj)/../common/misc-common.c
 	$(Q)$(CC) $(ZBOOT_CFLAGS) -I$(TOPDIR)/include -c -o $@ $<
@@ -89,7 +89,7 @@ $(obj)/../common/misc-simple.o: $(obj)/../common/misc-simple.c
 		-DZIMAGE_SIZE=0 -c -o $@ $<
 ifeq (1,0)
 $(obj)/../common/misc-simple.o: $(obj)/../common/misc-simple.c
-	$(CC) $(ZBOOT_CFLAGS)  -I$(TOPDIR)/include/asm/mach-generic -I$(TOPDIR)/include/asm/mach-mips  -DINITRD_OFFSET=0 -DINITRD_SIZE=0 -DZIMAGE_OFFSET=0 \
+	$(CC) $(ZBOOT_CFLAGS)  -I$(TOPDIR)/include/asm/mach-generic -I$(TOPDIR)/include/asm/mach-mips -DINITRD_OFFSET=0 -DINITRD_SIZE=0 -DZIMAGE_OFFSET=0 \
 		-DAVAIL_RAM_START=$(AVAIL_RAM_START) \
 		-DAVAIL_RAM_END=$(AVAIL_RAM_END) \
 		-DLOADADDR=$(LOADADDR) \
@@ -101,9 +101,9 @@ $(obj)/ns16550.o: $(obj)/ns16550.c
 $(obj)/../lib/lib.a:
 	$(MAKE) $(build)=$(dir $@) 
 
-$(obj)/../images/vmlinux.gz: $(TOPDIR)/vmlinux
+$(obj)/../images/vmlinux.gz: $(objtree)/vmlinux
 	$(Q)$(MAKE) $(build)=$(dir $@) vmlinux.gz
-zvmlinux: $(OBJECTS) $(LIBS) $(obj)/../ld.script $(obj)/../images/vmlinux.gz $(obj)/../common/dummy.o
+zvmlinux: $(OBJECTS) $(LIBS) $(TOPDIR)/arch/mips/zboot/ld.script $(obj)/../images/vmlinux.gz $(obj)/../common/dummy.o
 	$(Q)$(OBJCOPY) \
 		--add-section=.image=$(obj)/../images/vmlinux.gz \
 		--set-section-flags=.image=contents,alloc,load,readonly,data \
@@ -116,7 +116,7 @@ zvmlinux: $(OBJECTS) $(LIBS) $(obj)/../ld.script $(obj)/../images/vmlinux.gz $(o
 # srecord file we need.
 $(obj)/bzImage: zvmlinux
 	$(Q)mv zvmlinux $(obj)/../images/bzImage.$(BNAME)
-	$(Q)echo "  GEN    $(obj)/../images/"bzImage.$(BNAME)
+	$(Q)echo "  GEN    arch/mips/zboot/images/"bzImage.$(BNAME)
 	$(Q)$(OBJCOPY) -O srec $(obj)/../images/bzImage.$(BNAME) $(obj)/../images/$(BNAME).srec
 
 zImage.flash: zImage

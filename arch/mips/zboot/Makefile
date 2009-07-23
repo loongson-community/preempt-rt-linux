@@ -14,7 +14,7 @@
 
 targets 	:= bzImage
 
-EXTRA_CFLAGS := -I$(TOPDIR)/arch/mips/zboot/include 
+EXTRA_CFLAGS := -I$(TOPDIR)/arch/mips/zboot/include -I$(TOPDIR)/arch/$(ARCH)/zboot/common/include
 
 CFLAGS := $(ZBOOT_FLAGS)
 
@@ -33,12 +33,13 @@ CFLAGS := $(ZBOOT_FLAGS)
 GZIP_FLAGS = -v9f
 EXTRA_CFLAGS := $(CFLAGS) \
 		-I$(TOPDIR)/arch/$(ARCH)/zboot/include \
+		-I$(TOPDIR)/arch/$(ARCH)/zboot/common/include \
 		-I$(TOPDIR)/include/asm -I$(TOPDIR)/arch/mips/include -I$(TOPDIR)/arch/mips/include/asm
 AFLAGS	+= -D__BOOTER__
 
 BOOT_TARGETS = zImage zImage.initrd zImage.flash zImage.initrd.flash
 
-images/vmlinux.gz: $(TOPDIR)/vmlinux
+images/vmlinux.gz: $(objtree)/vmlinux
 	$(MAKE) -C images vmlinux.gz
 
 $(BOOT_TARGETS): lib/zlib.a images/vmlinux.gz
