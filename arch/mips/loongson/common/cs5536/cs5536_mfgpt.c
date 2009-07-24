@@ -197,24 +197,8 @@ static cycle_t mfgpt_read(void)
 	 * count), it cannot be newer.
 	 */
 	jifs = jiffies;
-	/* latch the counter */
-	outw(inw(MFGPT0_SETUP) | 0x0200, MFGPT0_SETUP);
-	/* read the latched count */
+	/* read the count */
 	count = inw(MFGPT0_CNT);
-	/* restart the counter */
-	outw(inw(MFGPT0_SETUP) & 0xfdff, MFGPT0_SETUP);
-
-	/* reset the latch if count > max + 1 */
-	if (count > COMPARE) {
-		/* set comparator2 */
-		outw(COMPARE, MFGPT0_CMP2);
-		/* set counter to 0 */
-		outw(0, MFGPT0_CNT);
-		/* enable counter, comparator2 to event mode, 14.318MHz clock */
-		outw(0xe310, MFGPT0_SETUP);
-
-		count = COMPARE - 1;
-	}
 
 	/*
 	 * It's possible for count to appear to go the wrong way for this
@@ -226,7 +210,7 @@ static cycle_t mfgpt_read(void)
 	 * Previous attempts to handle these cases intelligently were buggy, so
 	 * we just do the simple thing now.
 	 */
-	if (count > old_count && jifs == old_jifs)
+	if (count < old_count && jifs == old_jifs)
 		count = old_count;
 
 	old_count = count;
