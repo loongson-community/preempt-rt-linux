@@ -33,7 +33,6 @@ tags
 TAGS
 vmlinux
 vmlinux.32
-vmlinuz
 System.map
 Module.markers
 Module.symvers
@@ -67,6 +66,3 @@ ncscope.*
 *.orig
 *~
 \#*#
-
-# ignore bzImage
-arch/mips/loongson/image/bzImage

@@ -312,9 +312,8 @@ cflags-$(CONFIG_WR_PPMC)		+= -I$(srctree)/arch/mips/include/asm/mach-wrppmc
 load-$(CONFIG_WR_PPMC)		+= 0xffffffff80100000
 
 #
-# loongson family machines
+# lemote fulong mini-PC board
 #
-all-$(CONFIG_MACH_LOONGSON) += bzImage
 core-$(CONFIG_MACH_LOONGSON) +=arch/mips/loongson/
 cflags-$(CONFIG_MACH_LOONGSON) += -I$(srctree)/arch/mips/include/asm/mach-loongson \
 					-mno-branch-likely
@@ -694,11 +693,6 @@ rom.bin rom.sw: vmlinux
 	$(Q)$(MAKE) $(build)=arch/mips/lasat/image $@
 endif
 
-ifdef CONFIG_MACH_LOONGSON
-bzImage: vmlinux
-	$(Q)$(MAKE) $(build)=arch/mips/loongson/image $@
-endif
-
 #
 # Some machines like the Indy need 32-bit ELF binaries for booting purposes.
 # Other need ECOFF, so we build a 32-bit ELF binary for them which we then
@@ -747,7 +741,6 @@ install:
 
 archclean:
 	@$(MAKE) $(clean)=arch/mips/boot
-	@$(MAKE) $(clean)=arch/mips/loongson/image
 	@$(MAKE) $(clean)=arch/mips/lasat
 
 define archhelp
