@@ -156,6 +156,9 @@ config LASAT
 
 config MACH_LOONGSON
 	bool "Loongson family of machines"
+	select HAVE_KERNEL_GZIP
+	select HAVE_KERNEL_BZIP2
+	select HAVE_KERNEL_LZMA
 	help
 	  This enables the support of Loongson family of machines.
 
