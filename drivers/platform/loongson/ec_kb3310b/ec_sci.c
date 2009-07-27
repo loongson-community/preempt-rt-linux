@@ -474,7 +474,7 @@ static int sci_query_event_num(void)
  *	NOTE : this routine must follow the sci_query_event_num
  *	function in the interrupt
  */
-static int sci_get_event_num(void)
+int sci_get_event_num(void)
 {
 	int timeout = 100;
 	unsigned char value;
@@ -500,6 +500,7 @@ static int sci_get_event_num(void)
 
 	return value;
 }
+EXPORT_SYMBOL(sci_get_event_num);
 
 /*
  * sci_parse_num :

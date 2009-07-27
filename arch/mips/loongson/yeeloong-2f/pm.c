@@ -37,22 +37,6 @@ static unsigned int cached_master_mask;	/* i8259A */
 static unsigned int cached_slave_mask;
 static unsigned int cached_bonito_irq_mask; /* bonito */
 
-/* i8042 is connnectted to i8259A */
-static void setup_wakeup_interrupt(void)
-{
-#define I8042_KBD_IRQ 1
-	/* open the keyboard irq in i8259A */
-	outb((0xff & ~(1 << I8042_KBD_IRQ)), PIC_MASTER_IMR);
-	inb(PIC_MASTER_IMR);
-
-	/* enable keyboard port */
-	i8042_enable_kbd_port();
-#if 0
-	/* there is a need to wakeup the system via sci interrupt with relative event */
-#define SCI_IRQ_NUM 0x0A
-#endif
-}
-
 void arch_suspend_enable_irqs(void)
 {
 	/* enable all mips interrupts */
@@ -89,9 +73,83 @@ void arch_suspend_disable_irqs(void)
 	mmiowb();
 }
 
-static void loongson_cpu_idle(void)
+#define I8042_KBD_IRQ 1
+#define SCI_IRQ_NUM 0x0A /* system control interface */
+
+/* i8042, sci are connnectted to i8259A */
+static void setup_wakeup_interrupt(void)
+{
+	int irq_mask;
+
+	/* open the keyboard irq in i8259A */
+	outb((0xff & ~(1 << I8042_KBD_IRQ)), PIC_MASTER_IMR);
+	irq_mask = inb(PIC_MASTER_IMR);
+	/* enable keyboard port */
+	i8042_enable_kbd_port();
+
+	/* there is a need to wakeup the cpu via sci interrupt with relative
+	 * lid openning event
+	 */
+	outb(irq_mask & ~(1 << (SCI_IRQ_NUM - 8)), PIC_MASTER_IMR);
+	inb(PIC_MASTER_IMR);
+	outb(0xff & ~(1 << (SCI_IRQ_NUM - 8)), PIC_SLAVE_IMR);
+	inb(PIC_SLAVE_IMR);
+}
+
+extern int ec_query_seq(unsigned char cmd);
+extern int sci_get_event_num(void);
+
+static int wakeup_loongson(void)
+{
+	int irq;
+
+	/* query the interrupt number */
+	irq = mach_i8259_irq();
+	if (irq < 0)
+		return 0;
+	prom_printf("irq = %d\n", irq);
+
+	if (irq == I8042_KBD_IRQ)
+		return 1;
+	else if (irq == SCI_IRQ_NUM) {
+		int ret, sci_event;
+		/* query the event number */
+		ret = ec_query_seq(CMD_GET_EVENT_NUM);
+		if (ret < 0)
+			return 0;
+		sci_event = sci_get_event_num();
+		prom_printf("sci event = %d\n", sci_event);
+		if (sci_event < 0)
+			return 0;
+		if (sci_event == SCI_EVENT_NUM_LID) {
+			int lid_status;
+			/* check the LID status */
+			lid_status = ec_read(REG_LID_DETECT);
+			prom_printf("lid status = %d\n", lid_status);
+			/* wakeup cpu when people open the LID */
+			if (lid_status == BIT_LID_DETECT_ON)
+				return 1;
+		}
+	}
+	return 0;
+}
+
+static void wait_for_wakeup_events(void)
+{
+wait:
+	if (!wakeup_loongson()) {
+		LOONGSON_CHIPCFG0 &= ~0x7;
+		goto wait;
+	}
+}
+
+
+static void loongson_suspend_enter(void)
 {
 	static unsigned int cached_cpu_freq;
+
+	prom_printf("suspend: try to setup the wakeup interrupt (keyboard interrupt)\n");
+	setup_wakeup_interrupt();
 
 	cached_cpu_freq = LOONGSON_CHIPCFG0;
 
@@ -103,6 +161,12 @@ static void loongson_cpu_idle(void)
 	LOONGSON_CHIPCFG0 &= ~0x7;
 	mmiowb();
 
+	/* if the events are really what we want to wakeup cpu, wake up it,
+	 * otherwise, we Put CPU into wait mode again.
+	 */
+	prom_printf("suspend: here we wait for several events to wake up cpu\n");
+	wait_for_wakeup_events();
+
 	LOONGSON_CHIPCFG0 = cached_cpu_freq;
 	mmiowb();
 }
@@ -110,7 +174,7 @@ static void loongson_cpu_idle(void)
 static unsigned int cached_camera_status;
 static unsigned int cached_mute_status;
 
-static void arch_suspend(void)
+static void mach_suspend(void)
 {
 	unsigned int value;
 
@@ -157,7 +221,7 @@ static void arch_suspend(void)
 #endif
 }
 
-static void arch_resume(void)
+static void mach_resume(void)
 {
 	unsigned int value;
 
@@ -205,23 +269,15 @@ static void arch_resume(void)
 
 static int loongson_pm_enter(suspend_state_t state)
 {
-	prom_printf("suspend: try to call arch specific suspend\n");
-
-	arch_suspend();
-
-	prom_printf("suspend: try to setup the wakeup interrupt (keyboard interrupt)\n");
-
-	setup_wakeup_interrupt();
+	prom_printf("suspend: try to call mach specific suspend\n");
+	mach_suspend();
 
 	prom_printf("suspend: Enter into the wait mode of loongson cpu\n");
-
-	loongson_cpu_idle();
-
+	loongson_suspend_enter();
 	prom_printf("resume: waked up from wait mode of loongson cpu\n");
 
-	arch_resume();
-
-	prom_printf("resume: return from arch specific resume\n");
+	mach_resume();
+	prom_printf("resume: return from mach specific resume\n");
 
 	return 0;
 }
