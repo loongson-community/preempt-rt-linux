@@ -16,6 +16,7 @@
 
 #include <asm/i8259.h>
 #include <asm/delay.h>
+#include <asm/mipsregs.h>
 
 #include <loongson.h>
 
@@ -143,6 +144,14 @@ wait:
 	}
 }
 
+/* stop all perf counters by default
+ *   $24 is the control register of loongson perf counter
+ */
+static inline void stop_perf_counters(void)
+{
+	__write_64bit_c0_register($24, 0, 0);
+}
+
 
 static void loongson_suspend_enter(void)
 {
@@ -150,6 +159,9 @@ static void loongson_suspend_enter(void)
 
 	prom_printf("suspend: try to setup the wakeup interrupt (keyboard interrupt)\n");
 	setup_wakeup_interrupt();
+
+	/* stop all perf counters */
+	stop_perf_counters();
 
 	cached_cpu_freq = LOONGSON_CHIPCFG0;
 

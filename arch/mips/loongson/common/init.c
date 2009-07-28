@@ -18,6 +18,7 @@
 #include <linux/bootmem.h>
 
 #include <asm/bootinfo.h>
+#include <asm/mipsregs.h>
 
 #include <loongson.h>
 
@@ -32,6 +33,14 @@ static inline void set_loongson_addrwincfg_base(unsigned long base)
 }
 #endif
 
+/* stop all perf counters by default
+ *   $24 is the control register of loongson perf counter
+ */
+static inline void stop_perf_counters(void)
+{
+	__write_64bit_c0_register($24, 0, 0);
+}
+
 void __init prom_init(void)
 {
 	/* init several base address */
@@ -43,6 +52,8 @@ void __init prom_init(void)
 				     ioremap(LOONGSON_ADDRWINCFG_BASE,
 					     LOONGSON_ADDRWINCFG_SIZE));
 #endif
+	/* stop all perf counters */
+	stop_perf_counters();
 
 	prom_init_cmdline();
 	prom_init_env();
