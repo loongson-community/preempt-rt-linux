@@ -13,7 +13,7 @@
 #include <loongson.h>
 #include <machine.h>
 
-inline int mach_i8259_irq(void)
+int mach_i8259_irq(void)
 {
 	int irq, isr, imr;
 
@@ -30,7 +30,7 @@ inline int mach_i8259_irq(void)
 	return irq;
 }
 
-inline void mach_irq_dispatch(unsigned int pending)
+void mach_irq_dispatch(unsigned int pending)
 {
 	if (pending & CAUSEF_IP7)
 		do_IRQ(LOONGSON_TIMER_IRQ);
