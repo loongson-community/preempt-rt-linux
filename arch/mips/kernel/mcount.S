@@ -67,6 +67,35 @@
 	move ra, AT
 	.endm
 
+#ifdef CONFIG_DYNAMIC_FTRACE
+
+LEAF(_mcount)
+	RESTORE_SP_FOR_32BIT
+	RETURN_BACK
+	END(_mcount)
+
+NESTED(ftrace_caller, PT_SIZE, ra)
+	RESTORE_SP_FOR_32BIT
+	lw	t0, function_trace_stop
+	bnez	t0, ftrace_stub
+	nop
+
+	MCOUNT_SAVE_REGS
+
+	MCOUNT_SET_ARGS
+	.globl ftrace_call
+ftrace_call:
+	jal	ftrace_stub
+	nop
+
+	MCOUNT_RESTORE_REGS
+	.globl ftrace_stub
+ftrace_stub:
+	RETURN_BACK
+	END(ftrace_caller)
+
+#else	/* ! CONFIG_DYNAMIC_FTRACE */
+
 NESTED(_mcount, PT_SIZE, ra)
 	RESTORE_SP_FOR_32BIT
 	PTR_L	t0, function_trace_stop
@@ -93,6 +122,8 @@ static_trace:
 ftrace_stub:
 	RETURN_BACK
 	END(_mcount)
+
+#endif	/* ! CONFIG_DYNAMIC_FTRACE */
 
 	.set at
 	.set reorder
