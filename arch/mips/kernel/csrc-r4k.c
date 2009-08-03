@@ -10,7 +10,7 @@
 
 #include <asm/time.h>
 
-static cycle_t c0_hpt_read(void)
+static cycle_t notrace c0_hpt_read(void)
 {
 	return read_c0_count();
 }
