@@ -138,6 +138,7 @@ struct uart_8250_port {
 	unsigned char		mcr;
 	unsigned char		mcr_mask;	/* mask of user bits */
 	unsigned char		mcr_force;	/* mask of forced bits */
+	unsigned char		cur_iotype;	/* Running I/O type */
 
 	/*
 	 * Some bits in registers are cleared on a read, so they must
@@ -472,6 +473,7 @@ static void io_serial_out(struct uart_port *p, int offset, int value)
 
 static void set_io_from_upio(struct uart_port *p)
 {
+	struct uart_8250_port *up = (struct uart_8250_port *)p;
 	switch (p->iotype) {
 	case UPIO_HUB6:
 		p->serial_in = hub6_serial_in;
@@ -510,6 +512,8 @@ static void set_io_from_upio(struct uart_port *p)
 		p->serial_out = io_serial_out;
 		break;
 	}
+	/* Remember loaded iotype */
+	up->cur_iotype = p->iotype;
 }
 
 static void
@@ -1947,6 +1951,9 @@ static int serial8250_startup(struct uart_port *port)
 	up->capabilities = uart_config[up->port.type].flags;
 	up->mcr = 0;
 
+	if (up->port.iotype != up->cur_iotype)
+		set_io_from_upio(port);
+
 	if (up->port.type == PORT_16C950) {
 		/* Wake up and initialize UART */
 		up->acr = 0;
@@ -2573,6 +2580,9 @@ static void serial8250_config_port(struct uart_port *port, int flags)
 	if (ret < 0)
 		probeflags &= ~PROBE_RSA;
 
+	if (up->port.iotype != up->cur_iotype)
+		set_io_from_upio(port);
+
 	if (flags & UART_CONFIG_TYPE)
 		autoconfig(up, probeflags);
 	if (up->port.type != PORT_UNKNOWN && flags & UART_CONFIG_IRQ)
@@ -2680,6 +2690,11 @@ static void __init
 serial8250_register_ports(struct uart_driver *drv, struct device *dev)
 {
 	int i;
+
+	for (i = 0; i < nr_uarts; i++) {
+		struct uart_8250_port *up = &serial8250_ports[i];
+		up->cur_iotype = 0xFF;
+	}
 
 	serial8250_isa_init_ports();
 
