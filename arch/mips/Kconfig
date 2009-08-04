@@ -159,6 +159,7 @@ config MACH_LOONGSON
 	select HAVE_KERNEL_GZIP
 	select HAVE_KERNEL_BZIP2
 	select HAVE_KERNEL_LZMA
+	select LOONGSON_PLATFORM_DEVICES
 	help
 	  This enables the support of Loongson family of machines.
 
