@@ -122,6 +122,23 @@ chmod a+x scripts/addr2sym
 chmod a+x scripts/kd
 ./scripts/kd -c -l -i log.sym
 
+2.3 use it via the autokft.sh
+
+there is a new tool named scripts/autokft.sh which can help you simplifing the
+procedure of tracing an indicated function.
+
+here are several steps to use it:
+
+* compile your kernel with KFT enabled
+* install this new kernel and reboot into it
+* enter into the directory of scripts/
+  or
+  copy the tools scripts/{kd,addr2sym,sym2addr,autokft.sh} to a directory,and enter into it
+* trace and indicated function, here we use sys_write as an example
+  $ ./autokft.sh sys_write ./   # this will be triggered by ourselves
+  or
+  $ ./autokft.sh sys_write ./ 1 # this will be triggered by external actions
+
 please learn more the kd usage from Documentation/kft.txt
 
-there is all, be happy to play with it.
+that is all, be happy to play with it.
