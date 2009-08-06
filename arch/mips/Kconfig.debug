@@ -53,6 +53,10 @@ config RUNTIME_DEBUG
 
 config KFT
 	bool "Kernel Function Trace"
+	select PROC_FS
+	select DEBUG_KERNEL
+	select KALLSYMS
+	select KALLSYMS_ALL
 	help
 	  Say Y here to turn on kernel function tracing.
 	  This allows you to get a trace of kernel functions
