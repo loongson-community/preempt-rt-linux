@@ -49,14 +49,13 @@ make sure these options are there:
 
 CONFIG_KALLSYMS=y
 CONFIG_KALLSYMS_ALL=y
-# CONFIG_KALLSYMS_EXTRA_PASS is not set
+CONFIG_KALLSYMS_EXTRA_PASS=y
 CONFIG_KFT=y
 CONFIG_KFT_STATIC_RUN=y
 
-!!!NOTE: currently, kft not work on linux kernel/64bit for loongson2f, so
-please compile the kernel in 32bit for loongson2f.
-
 * compile it
+
+!!!NOTE: currently, kft only work with gcc 3.4.6 
 
 when enabling CONFIG_KFT_STATIC_RUN, please do this before compiling:
 
