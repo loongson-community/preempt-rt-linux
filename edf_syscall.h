@@ -10,24 +10,24 @@
  */
 #ifdef __x86_64__
 /* XXX use the proper syscall number */
-#define __NR_sched_setscheduler2	297
+#define __NR_sched_setscheduler_ex	299
 #endif
 #ifdef __i386__
 /* XXX use the proper syscall number */
-#define __NR_sched_setscheduler2	335
+#define __NR_sched_setscheduler_ex	337
 #endif
 
 #ifdef __arm__
 /* XXX use the proper syscall number */
-#define __NR_sched_setscheduler2	363
+#define __NR_sched_setscheduler_ex	365
 #endif
 
-struct sched_param2 {
+struct sched_param_ex {
 	int sched_priority;
-	struct timespec sched_edf_period;
-	struct timespec sched_edf_runtime;
+	struct timespec sched_period;
+	struct timespec sched_runtime;
 };
 
 
-int sched_setscheduler2(pid_t pid, int policy,
-			struct sched_param2 *param);
+int sched_setscheduler_ex(pid_t pid, int policy,
+			  struct sched_param_ex *param);

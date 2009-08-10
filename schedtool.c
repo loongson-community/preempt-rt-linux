@@ -147,7 +147,7 @@ static inline void time_to_timespec(struct timespec *t, long value)
 };
 
 int engine(struct engine_s *e);
-int set_process(pid_t pid, int policy, struct sched_param2 *p);
+int set_process(pid_t pid, int policy, struct sched_param_ex *p);
 unsigned long parse_affinity(char *arg);
 int set_affinity(pid_t pid, unsigned long mask);
 int set_niceness(pid_t pid, int nice);
@@ -405,10 +405,10 @@ int engine(struct engine_s *e)
 			 how much set-calls went wrong
                          set_process returns -1 upon failure
 			 */
-			struct sched_param2 sparam;
+			struct sched_param_ex sparam;
 			sparam.sched_priority = e->prio;
-			sparam.sched_edf_period = e->deadline;
-			sparam.sched_edf_runtime = e->budget;
+			sparam.sched_period = e->deadline;
+			sparam.sched_runtime = e->budget;
 			tmpret=set_process(pid,e->policy,&sparam);
 			ret += tmpret;
 
@@ -467,7 +467,7 @@ int engine(struct engine_s *e)
 }
 
 
-int set_process(pid_t pid, int policy, struct sched_param2 *p)
+int set_process(pid_t pid, int policy, struct sched_param_ex *p)
 {
 	int ret;
 
@@ -475,7 +475,7 @@ int set_process(pid_t pid, int policy, struct sched_param2 *p)
 	char *msg2="could not set PID %d to raw policy #%d";
 
 	/* anything other than 0 indicates error */
-	if((ret=sched_setscheduler2(pid, policy, p))) {
+	if((ret=sched_setscheduler_ex(pid, policy, p))) {
 
                 /* la la pointer mismatch .. lala */
 		decode_error((CHECK_RANGE_POLICY(policy) ? msg1 : msg2),
@@ -609,7 +609,7 @@ void print_prio_min_max(int policy)
 void print_process(pid_t pid)
 {
 	int policy, nice;
-	struct sched_param2 p;
+	struct sched_param_ex p;
         unsigned long aff_mask=(0-1);
 
 	/* strict error checking not needed - it works or not. */
