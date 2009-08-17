@@ -57,7 +57,7 @@ struct sci_device {
 	unsigned char sci_number;
 
 	/* sci count */
-	unsigned char sci_num_array[SCI_MAX_EVENT_COUNT];
+	unsigned char sci_parameter;
 
 	/* irq relative */
 	unsigned char irq;
@@ -77,8 +77,9 @@ struct sci_device {
 	/* storage initial value of sci status register
 	 * sci_init_value[0] as brightness
 	 * sci_init_value[1] as volume
+	 * sci_init_value[2] as ac
 	 */
-	unsigned char sci_init_value[2];
+	unsigned char sci_init_value[3];
 };
 struct sci_device *sci_device;
 
@@ -306,9 +307,7 @@ unsigned char proc_buf[PROC_BUF_SIZE];
 static ssize_t sci_proc_read(struct file *file, char *buf, size_t len,
 			     loff_t *ppos)
 {
-	unsigned char event[SCI_MAX_EVENT_COUNT];
 	int ret = 0;
-	int i;
 	int count = 0;
 	DECLARE_WAITQUEUE(wait, current);
 
@@ -327,32 +326,7 @@ static ssize_t sci_proc_read(struct file *file, char *buf, size_t len,
 	PRINTK_DBG("1 irq_data %d\n", sci_device->irq_data);
 	__set_current_state(TASK_RUNNING);
 
-	for (i = 0; i < SCI_MAX_EVENT_COUNT; i++)
-		event[i] = sci_device->sci_num_array[i];
-
-	ret = sprintf(proc_buf,
-		      "%s 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x "
-		      "0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x "
-		      "0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n",
-		      driver_version, event[SCI_INDEX_DISPLAY_BRIGHTNESS_INC],
-		      event[SCI_INDEX_DISPLAY_BRIGHTNESS_DEC],
-		      event[SCI_INDEX_AUDIO_VOLUME_INC],
-		      event[SCI_INDEX_AUDIO_VOLUME_DEC],
-		      event[SCI_INDEX_AUDIO_MUTE], event[SCI_INDEX_WLAN],
-		      event[SCI_INDEX_LID], event[SCI_INDEX_DISPLAY_TOGGLE],
-		      event[SCI_INDEX_BLACK_SCREEN], event[SCI_INDEX_SLEEP],
-		      event[SCI_INDEX_OVERTEMP], event[SCI_INDEX_CRT_DETECT],
-		      event[SCI_INDEX_CAMERA], event[SCI_INDEX_USB_OC2],
-		      event[SCI_INDEX_USB_OC0],
-		      (event[SCI_INDEX_AC_BAT] & 0x01) >> BIT_AC_BAT_BAT_IN,
-		      (event[SCI_INDEX_AC_BAT] & 0x02) >> BIT_AC_BAT_AC_IN,
-		      (event[SCI_INDEX_AC_BAT] & 0x04) >> BIT_AC_BAT_INIT_CAP,
-		      (event[SCI_INDEX_AC_BAT] & 0x08) >>
-		      BIT_AC_BAT_CHARGE_MODE,
-		      (event[SCI_INDEX_AC_BAT] & 0x10) >>
-		      BIT_AC_BAT_STOP_CHARGE,
-		      (event[SCI_INDEX_AC_BAT] & 0x20) >> BIT_AC_BAT_BAT_LOW,
-		      (event[SCI_INDEX_AC_BAT] & 0x40) >> BIT_AC_BAT_BAT_FULL);
+ 	ret = sprintf(proc_buf, "0x%x\t%d\n", sci_device->sci_number, sci_device->sci_parameter);
 
 	count = strlen(proc_buf);
 	sci_device->irq_data = 0;
@@ -511,149 +485,55 @@ static int sci_parse_num(struct sci_device *sci_device)
 {
 	unsigned char val;
 
-	sci_device->sci_num_array[SCI_INDEX_DISPLAY_TOGGLE] = 0x0;
-	sci_device->sci_num_array[SCI_INDEX_SLEEP] = 0x0;
-	sci_device->sci_num_array[SCI_INDEX_DISPLAY_BRIGHTNESS_DEC] = 0;
-	sci_device->sci_num_array[SCI_INDEX_DISPLAY_BRIGHTNESS_INC] = 0;
-	sci_device->sci_num_array[SCI_INDEX_AUDIO_VOLUME_INC] = 0;
-	sci_device->sci_num_array[SCI_INDEX_AUDIO_VOLUME_DEC] = 0;
-
-	sci_device->sci_num_array[SCI_INDEX_CAMERA] = 0x0;
-	sci_device->sci_num_array[SCI_INDEX_WLAN] = ec_read(REG_WLAN_STATUS);
-	sci_device->sci_num_array[SCI_INDEX_AUDIO_MUTE] =
-	    ec_read(REG_AUDIO_MUTE);
-	sci_device->sci_num_array[SCI_INDEX_BLACK_SCREEN] =
-	    ec_read(REG_DISPLAY_LCD);
-	sci_device->sci_num_array[SCI_INDEX_CRT_DETECT] =
-	    ec_read(REG_CRT_DETECT);
-	if (ec_read(REG_BAT_POWER) & BIT_BAT_POWER_ACIN) {
-		sci_device->sci_num_array[SCI_INDEX_AC_BAT] |=
-		    1 << BIT_AC_BAT_AC_IN;
-	} else {
-		sci_device->sci_num_array[SCI_INDEX_AC_BAT] &=
-		    ~(1 << BIT_AC_BAT_AC_IN);
-	}
-
 	switch (sci_device->sci_number) {
 	case SCI_EVENT_NUM_LID:
-		sci_device->sci_num_array[SCI_INDEX_LID] =
-		    ec_read(REG_LID_DETECT);
+		sci_device->sci_parameter = ec_read(REG_LID_DETECT);
 		break;
 	case SCI_EVENT_NUM_DISPLAY_TOGGLE:
-		sci_device->sci_num_array[SCI_INDEX_DISPLAY_TOGGLE] = 0x01;
+		sci_device->sci_parameter = 0x01;
 		break;
 	case SCI_EVENT_NUM_SLEEP:
-		sci_device->sci_num_array[SCI_INDEX_SLEEP] = 0x01;
+		sci_device->sci_parameter = 0x01;
 		break;
 	case SCI_EVENT_NUM_OVERTEMP:
-		sci_device->sci_num_array[SCI_INDEX_OVERTEMP] =
-		    (ec_read(REG_BAT_CHARGE_STATUS) &
-		     BIT_BAT_CHARGE_STATUS_OVERTEMP) >> 2;
+		sci_device->sci_parameter = (ec_read(REG_BAT_CHARGE_STATUS) & BIT_BAT_CHARGE_STATUS_OVERTEMP) >> 2;
 		break;
 	case SCI_EVENT_NUM_CRT_DETECT:
-		sci_device->sci_num_array[SCI_INDEX_CRT_DETECT] =
-		    ec_read(REG_CRT_DETECT);
+		sci_device->sci_parameter = ec_read(REG_CRT_DETECT);
 		break;
 	case SCI_EVENT_NUM_CAMERA:
-		sci_device->sci_num_array[SCI_INDEX_CAMERA] = 0x1;
+		sci_device->sci_parameter = ec_read(REG_CAMERA_STATUS);
 		break;
 	case SCI_EVENT_NUM_USB_OC2:
-		sci_device->sci_num_array[SCI_INDEX_USB_OC2] =
-		    ec_read(REG_USB2_FLAG);
+		sci_device->sci_parameter = ec_read(REG_USB2_FLAG);
 		break;
 	case SCI_EVENT_NUM_USB_OC0:
-		sci_device->sci_num_array[SCI_INDEX_USB_OC0] =
-		    ec_read(REG_USB0_FLAG);
+		sci_device->sci_parameter = ec_read(REG_USB0_FLAG);
 		break;
 	case SCI_EVENT_NUM_AC_BAT:
-		if (ec_read(REG_BAT_STATUS) & BIT_BAT_STATUS_IN) {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] |=
-			    1 << BIT_AC_BAT_BAT_IN;
-		} else {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] &=
-			    ~(1 << BIT_AC_BAT_BAT_IN);
-		}
-
-		if (ec_read(REG_BAT_POWER) & BIT_BAT_POWER_ACIN) {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] |=
-			    1 << BIT_AC_BAT_AC_IN;
-		} else {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] &=
-			    ~(1 << BIT_AC_BAT_AC_IN);
-		}
-
-		/* init_bat_cap will not be included here. */
-
-		if (ec_read(REG_BAT_CHARGE_STATUS) &
-		    BIT_BAT_CHARGE_STATUS_PRECHG) {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] |=
-			    1 << BIT_AC_BAT_CHARGE_MODE;
-		} else {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] &=
-			    ~(1 << BIT_AC_BAT_CHARGE_MODE);
-		}
-
-		if (ec_read(REG_BAT_STATE) & BIT_BAT_STATE_DISCHARGING) {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] |=
-			    1 << BIT_AC_BAT_STOP_CHARGE;
-		} else {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] &=
-			    ~(1 << BIT_AC_BAT_STOP_CHARGE);
-		}
-
-		if (ec_read(REG_BAT_STATUS) & BIT_BAT_STATUS_LOW) {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] |=
-			    1 << BIT_AC_BAT_BAT_LOW;
-		} else {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] &=
-			    ~(1 << BIT_AC_BAT_BAT_LOW);
-		}
-
-		if (ec_read(REG_BAT_STATUS) & BIT_BAT_STATUS_FULL) {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] |=
-			    1 << BIT_AC_BAT_BAT_FULL;
-		} else {
-			sci_device->sci_num_array[SCI_INDEX_AC_BAT] &=
-			    ~(1 << BIT_AC_BAT_BAT_FULL);
-		}
+		val = ec_read(REG_BAT_POWER) & BIT_BAT_POWER_ACIN;
+ 		sci_device->sci_parameter= 3;
+ 		if (sci_device->sci_init_value[2] == 0 && val == 1)
+ 			sci_device->sci_parameter = 1;
+ 		if (sci_device->sci_init_value[2] == 1 && val == 0)
+ 			sci_device->sci_parameter = 0;
+ 		sci_device->sci_init_value[2] = val;
 		break;
 	case SCI_EVENT_NUM_DISPLAY_BRIGHTNESS:
-		val = ec_read(REG_DISPLAY_BRIGHTNESS);
-		if ((val == 0x00) || (val < sci_device->sci_init_value[0])) {
-			sci_device->
-			    sci_num_array[SCI_INDEX_DISPLAY_BRIGHTNESS_DEC] = 1;
-			sci_device->sci_init_value[0] = val;
-		} else if ((val == 0x08)
-			   || (val > sci_device->sci_init_value[0])) {
-			sci_device->
-			    sci_num_array[SCI_INDEX_DISPLAY_BRIGHTNESS_INC] = 1;
-			sci_device->sci_init_value[0] = val;
-		}
+		sci_device->sci_parameter = ec_read(REG_DISPLAY_BRIGHTNESS);
 		break;
 	case SCI_EVENT_NUM_AUDIO_VOLUME:
-		val = ec_read(REG_AUDIO_VOLUME);
-		if ((val == 0x00) || (val < sci_device->sci_init_value[1])) {
-			sci_device->sci_num_array[SCI_INDEX_AUDIO_VOLUME_DEC] =
-			    1;
-			sci_device->sci_init_value[1] = val;
-		} else if ((val == 0x0a)
-			   || (val > sci_device->sci_init_value[1])) {
-			sci_device->sci_num_array[SCI_INDEX_AUDIO_VOLUME_INC] =
-			    1;
-			sci_device->sci_init_value[1] = val;
-		}
+ 		val = ec_read(REG_AUDIO_VOLUME);
+		sci_device->sci_parameter = val;
 		break;
 	case SCI_EVENT_NUM_WLAN:
-		sci_device->sci_num_array[SCI_INDEX_WLAN] =
-		    ec_read(REG_WLAN_STATUS);
+		sci_device->sci_parameter = ec_read(REG_WLAN_STATUS);
 		break;
 	case SCI_EVENT_NUM_AUDIO_MUTE:
-		sci_device->sci_num_array[SCI_INDEX_AUDIO_MUTE] =
-		    ec_read(REG_AUDIO_MUTE);
+		sci_device->sci_parameter = ec_read(REG_AUDIO_MUTE);
 		break;
 	case SCI_EVENT_NUM_BLACK_SCREEN:
-		sci_device->sci_num_array[SCI_INDEX_BLACK_SCREEN] =
-		    ec_read(REG_DISPLAY_LCD);
+		sci_device->sci_parameter = ec_read(REG_DISPLAY_LCD);
 		break;
 
 	default:
@@ -870,7 +750,6 @@ static int __devinit sci_pci_init(struct pci_dev *pdev,
 {
 	u32 gpio_base;
 	int ret = -EIO;
-	int i;
 
 	/* init the sci device */
 	sci_device = kmalloc(sizeof(struct sci_device), GFP_KERNEL);
@@ -888,9 +767,8 @@ static int __devinit sci_pci_init(struct pci_dev *pdev,
 
 	sci_device->sci_init_value[0] = ec_read(REG_DISPLAY_BRIGHTNESS);
 	sci_device->sci_init_value[1] = ec_read(REG_AUDIO_VOLUME);
-
-	for (i = 0; i < SCI_MAX_EVENT_COUNT; i++)
-		sci_device->sci_num_array[i] = 0x00;
+ 	sci_device->sci_init_value[2] = ec_read(REG_BAT_POWER) & BIT_BAT_POWER_ACIN;
+	sci_device->sci_parameter = 0x00;
 
 	/* enable pci device and get the GPIO resources */
 	ret = pci_enable_device(pdev);
