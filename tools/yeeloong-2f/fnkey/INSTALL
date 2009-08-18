@@ -1,0 +1,23 @@
+INSTALLATION
+
+falcon <wuzj@lemote.com>
+2009-08-15
+
+1. Compile
+
+use Debian/Linux as an example:
+
+install these three -dev packages at first,
+
+$ apt-get install libxext-dev libxft-dev libglib2.0-dev
+
+compile:
+
+$ make
+
+2. Install
+
+by default, the fnkey will be installed to /usr/bin, and the default.sh and
+fnkey.conf will be copied to /etc/fnkey/
+
+$ make install

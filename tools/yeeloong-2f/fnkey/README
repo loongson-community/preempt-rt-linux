@@ -1,0 +1,44 @@
+README
+
+falcon <wuzj@lemote.com>
+2009-08-15
+
+1. introduction
+
+fnkey is a tool for helping user to play with the function key of YeeLoong
+netbook.  it is originally written by Cui Chunbo<cuicb@lemote.com> from Lemote.
+
+2. principle
+
+there is a SCI(system control interrupt) in YeeLoong netbook for handling the
+function keys(including LID open/close, AC plugin/out). when any of the
+function key operation take place, there will be a SCI interrupt send to CPU,
+then EC(Embedded Controller) module will handle the interrupt and output
+according information to /proc/sci.
+
+fnkey, run as a daemon, it will poll the interface, if any information catched
+from /proc/sci, it will draw some information configured in fnkey.conf to the
+screen and do the according actions configured in default.sh.
+
+3. install
+
+please read INSTALL
+
+NOTE:
+
+fnkey depends on the /proc/sci interface(provided by EC module), and this fnkey
+is merged into the kernel source code and put into tools/fnkey.
+
+this fnkey works with the following /proc/sci/ interface:
+
+$ cat /proc/sci
+0x2d    8
+0x2d    7
+0x2c    0
+...
+
+if you are using the old /proc/sci interface, please update your EC module or
+use the EC module maintained in the kernel(>=2.6.30) source code and ensure the
+following options is selected:
+
+CONFIG_EC_KB3310B
