@@ -1,0 +1,20 @@
+
+These three files are used with the /proc/brightness interface provided by EC
+module to control the brightness of YeeLoong via kpowersave or the other
+relative applications.
+
+install:
+
+$ make install
+
+or copy them manually:
+
+$ cp preferences.fdi /etc/hal/fdi/policy
+$ cp hal-system-lcd-get-brightness-linux /usr/lib/hal/scripts/linux
+$ cp hal-system-lcd-set-brightness-linux /usr/lib/hal/scripts/linux
+$ /etc/init.d/hal restart
+
+NOTE:
+
+after installing this new configuration file, you need to restart the HAL
+daemon.
