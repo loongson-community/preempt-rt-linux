@@ -274,7 +274,7 @@ static const char driver_version[] = VERSION;
 
 #ifdef CONFIG_PROC_FS
 #define	PROC_BUF_SIZE	128
-unsigned char proc_buf[PROC_BUF_SIZE];
+static unsigned char proc_buf[PROC_BUF_SIZE];
 
 /*
  * sci_proc_read :
