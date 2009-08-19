@@ -17,6 +17,7 @@ if LOONGSON_PLATFORM_DEVICES
 config EC_KB3310B
 	tristate "Embedded Controller: Kb3310b support"
 	depends on LEMOTE_YEELOONG2F
+	select INPUT_EVDEV
 	default y
 	---help---
 	  This is a driver for yeeloong laptops. It adds the kb3310b support:

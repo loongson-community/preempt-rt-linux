@@ -99,6 +99,7 @@ static void setup_wakeup_interrupt(void)
 
 extern int ec_query_seq(unsigned char cmd);
 extern int sci_get_event_num(void);
+extern void yeeloong_lid_update_status(int status);
 
 static int wakeup_loongson(void)
 {
@@ -128,8 +129,11 @@ static int wakeup_loongson(void)
 			lid_status = ec_read(REG_LID_DETECT);
 			prom_printf("lid status = %d\n", lid_status);
 			/* wakeup cpu when people open the LID */
-			if (lid_status == BIT_LID_DETECT_ON)
+			if (lid_status == BIT_LID_DETECT_ON) {
+				/* send out this event */
+				yeeloong_lid_update_status(lid_status);
 				return 1;
+			}
 		}
 	}
 	return 0;

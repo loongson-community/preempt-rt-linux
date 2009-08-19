@@ -545,6 +545,8 @@ static int sci_parse_num(struct sci_device *sci_device)
 	return 0;
 }
 
+extern void yeeloong_lid_update_status(int status);
+
 /*
  * sci_int_routine : sci main interrupt routine
  * we will do the query and get event number together
@@ -581,9 +583,12 @@ static irqreturn_t sci_int_routine(int irq, void *dev_id)
 	    && (sci_device->sci_number != 0xff)) {
 		ret = sci_parse_num(sci_device);
 		PRINTK_DBG("ret 3: %d\n", ret);
-		if (!ret)
+		if (!ret) {
+			/* update LID status */
+			if (sci_device->sci_number == SCI_EVENT_NUM_LID)
+				yeeloong_lid_update_status(sci_device->sci_parameter);
 			sci_device->irq_data = 1;
-		else
+		} else
 			sci_device->irq_data = 0;
 
 		wake_up_interruptible(&(sci_device->wq));

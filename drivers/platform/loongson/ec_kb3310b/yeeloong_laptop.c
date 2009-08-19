@@ -14,6 +14,8 @@
 #include <linux/backlight.h>
 #include <linux/err.h>
 #include <linux/fb.h>
+#include <linux/input.h>
+
 #include "ec.h"
 #include "ec_misc_fn.h"
 
@@ -49,6 +51,44 @@ static struct backlight_ops yeeloong_ops = {
 
 static struct backlight_device *yeeloong_backlight_device;
 
+static struct input_dev *yeeloong_lid_dev;
+
+/* This should be called in the SCI interrupt handler and the LID open action
+ * wakeup function in pm.c
+ */
+void yeeloong_lid_update_status(int status)
+{
+	input_report_switch(yeeloong_lid_dev, SW_LID, !status);
+	input_sync(yeeloong_lid_dev);
+}
+EXPORT_SYMBOL(yeeloong_lid_update_status);
+
+static int __init yeeloong_lid_setup(void)
+{
+	int ret;
+
+	yeeloong_lid_dev = input_allocate_device();
+
+	if (!yeeloong_lid_dev)
+		return -ENOMEM;
+
+	yeeloong_lid_dev->name = "Lid Switch";
+	yeeloong_lid_dev->phys = "button/input0";
+	yeeloong_lid_dev->id.bustype = BUS_HOST;
+	yeeloong_lid_dev->dev.parent = NULL;
+
+	yeeloong_lid_dev->evbit[0] = BIT_MASK(EV_SW);
+	set_bit(SW_LID, yeeloong_lid_dev->swbit);
+
+	ret = input_register_device(yeeloong_lid_dev);
+	if (ret) {
+		input_free_device(yeeloong_lid_dev);
+		return ret;
+	}
+
+	return 0;
+}
+
 static int __init yeeloong_init(void)
 {
 	int max_brightness = MAX_BRIGHTNESS;
@@ -62,22 +102,34 @@ static int __init yeeloong_init(void)
 	if (IS_ERR(yeeloong_backlight_device)) {
 		ret = PTR_ERR(yeeloong_backlight_device);
 		yeeloong_backlight_device = NULL;
-		goto out;
+		return ret;
 	}
 
 	yeeloong_backlight_device->props.max_brightness = max_brightness;
 	yeeloong_backlight_device->props.brightness =
-	yeeloong_get_brightness(yeeloong_backlight_device);
+		yeeloong_get_brightness(yeeloong_backlight_device);
 	backlight_update_status(yeeloong_backlight_device);
 
+	ret = yeeloong_lid_setup();
+	if (ret)
+		return ret;
+
+	/* update the current state of lid */
+	yeeloong_lid_update_status(BIT_LID_DETECT_ON);
+
 	return 0;
-out:
-	return ret;
 }
 
 static void __exit yeeloong_exit(void)
 {
-	backlight_device_unregister(yeeloong_backlight_device);
+	if (yeeloong_backlight_device)
+		backlight_device_unregister(yeeloong_backlight_device);
+	yeeloong_backlight_device = NULL;
+
+	if (yeeloong_lid_dev)
+		input_unregister_device(yeeloong_lid_dev);
+	yeeloong_lid_dev = NULL;
+
 }
 
 module_init(yeeloong_init);
