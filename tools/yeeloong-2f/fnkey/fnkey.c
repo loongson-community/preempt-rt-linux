@@ -183,10 +183,9 @@ event_t *get_event(int fd)
 	case AUDIO_VOLUME:
 	case BRIGHTNESS:
 		if (raw_key == AUDIO_VOLUME)
-			raw_action = raw_action * 100 / VOL_LEVEL;
+			level = raw_action * 100 / VOL_LEVEL;
 		else
-			raw_action = raw_action * 100 / BRIGHT_LEVEL + 10;
-		level = raw_action;
+			level = raw_action * 100 / BRIGHT_LEVEL + 10;
 		raw_action = 0;
 		break;
  deafult:
