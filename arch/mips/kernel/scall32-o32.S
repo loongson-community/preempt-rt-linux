@@ -652,6 +652,9 @@ einval:	li	v0, -ENOSYS
 	sys	sys_inotify_init1	1
 	sys	sys_preadv		6	/* 4330 */
 	sys	sys_pwritev		6
+	sys	sys_ni_syscall		0	/* sys_rt_tgsigqueueinfo */
+	sys	sys_ni_syscall		0	/* sys_perf_counter_open */
+	sys	sys_accept4		4
 	.endm
 
 	/* We pre-compute the number of _instruction_ bytes needed to
