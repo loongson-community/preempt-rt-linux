@@ -91,7 +91,6 @@ static int __init yeeloong_lid_setup(void)
 
 static int __init yeeloong_init(void)
 {
-	int max_brightness = MAX_BRIGHTNESS;
 	int ret;
 
 	yeeloong_backlight_device = backlight_device_register(
@@ -105,7 +104,7 @@ static int __init yeeloong_init(void)
 		return ret;
 	}
 
-	yeeloong_backlight_device->props.max_brightness = max_brightness;
+	yeeloong_backlight_device->props.max_brightness = MAX_BRIGHTNESS;
 	yeeloong_backlight_device->props.brightness =
 		yeeloong_get_brightness(yeeloong_backlight_device);
 	backlight_update_status(yeeloong_backlight_device);
