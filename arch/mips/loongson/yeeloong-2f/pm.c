@@ -76,6 +76,7 @@ void arch_suspend_disable_irqs(void)
 
 #define I8042_KBD_IRQ 1
 #define SCI_IRQ_NUM 0x0A /* system control interface */
+#define CASCADE_IRQ_NUM 2 /* cascade irq num of i8259A */
 
 /* i8042, sci are connnectted to i8259A */
 static void setup_wakeup_interrupt(void)
@@ -91,7 +92,7 @@ static void setup_wakeup_interrupt(void)
 	/* there is a need to wakeup the cpu via sci interrupt with relative
 	 * lid openning event
 	 */
-	outb(irq_mask & ~(1 << (SCI_IRQ_NUM - 8)), PIC_MASTER_IMR);
+	outb(irq_mask & ~(1 << CASCADE_IRQ_NUM), PIC_MASTER_IMR);
 	inb(PIC_MASTER_IMR);
 	outb(0xff & ~(1 << (SCI_IRQ_NUM - 8)), PIC_SLAVE_IMR);
 	inb(PIC_SLAVE_IMR);
