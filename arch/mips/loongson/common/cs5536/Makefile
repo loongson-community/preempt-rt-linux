@@ -22,4 +22,10 @@ obj-$(CONFIG_CS5536_UDC) += cs5536_udc.o
 #
 obj-$(CONFIG_CS5536_MFGPT) += cs5536_mfgpt.o
 
+#
+# Enable cs5536 I2C/SMBUS support
+#
+obj-$(CONFIG_CS5536_I2C) += cs5536_i2c.o
+
+
 EXTRA_CFLAGS += -Werror
