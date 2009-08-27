@@ -51,38 +51,61 @@ static struct backlight_ops yeeloong_ops = {
 
 static struct backlight_device *yeeloong_backlight_device;
 
-static struct input_dev *yeeloong_lid_dev;
+static struct input_dev *yeeloong_sci_dev;
 
 /* This should be called in the SCI interrupt handler and the LID open action
  * wakeup function in pm.c
  */
 void yeeloong_lid_update_status(int status)
 {
-	input_report_switch(yeeloong_lid_dev, SW_LID, !status);
-	input_sync(yeeloong_lid_dev);
+	input_report_switch(yeeloong_sci_dev, SW_LID, !status);
+	input_sync(yeeloong_sci_dev);
 }
 EXPORT_SYMBOL(yeeloong_lid_update_status);
 
-static int __init yeeloong_lid_setup(void)
+void yeeloong_sci_update_status(int event, int status)
+{
+	switch (event) {
+	case SCI_EVENT_NUM_LID:
+		yeeloong_lid_update_status(status);
+		break;
+	case SCI_EVENT_NUM_SLEEP:
+		input_report_key(yeeloong_sci_dev, KEY_SLEEP, 1);
+		input_sync(yeeloong_sci_dev);
+		input_report_key(yeeloong_sci_dev, KEY_SLEEP, 0);
+		input_sync(yeeloong_sci_dev);
+		break;
+	default:
+		break;
+	}
+}
+EXPORT_SYMBOL(yeeloong_sci_update_status);
+
+static int __init yeeloong_sci_setup(void)
 {
 	int ret;
 
-	yeeloong_lid_dev = input_allocate_device();
+	yeeloong_sci_dev = input_allocate_device();
 
-	if (!yeeloong_lid_dev)
+	if (!yeeloong_sci_dev)
 		return -ENOMEM;
 
-	yeeloong_lid_dev->name = "Lid Switch";
-	yeeloong_lid_dev->phys = "button/input0";
-	yeeloong_lid_dev->id.bustype = BUS_HOST;
-	yeeloong_lid_dev->dev.parent = NULL;
+	yeeloong_sci_dev->name = "YeeLoong HotKeys(Fn+Fx/left/right/up/down)";
+	yeeloong_sci_dev->phys = "button/input0";
+	yeeloong_sci_dev->id.bustype = BUS_HOST;
+	yeeloong_sci_dev->dev.parent = NULL;
 
-	yeeloong_lid_dev->evbit[0] = BIT_MASK(EV_SW);
-	set_bit(SW_LID, yeeloong_lid_dev->swbit);
+	/* lid switch */
+	set_bit(EV_SW, yeeloong_sci_dev->evbit);
+	set_bit(SW_LID, yeeloong_sci_dev->swbit);
 
-	ret = input_register_device(yeeloong_lid_dev);
+	/* sleep/suspend: STD */
+	set_bit(EV_KEY, yeeloong_sci_dev->evbit);
+	set_bit(KEY_SLEEP, yeeloong_sci_dev->keybit);
+
+	ret = input_register_device(yeeloong_sci_dev);
 	if (ret) {
-		input_free_device(yeeloong_lid_dev);
+		input_free_device(yeeloong_sci_dev);
 		return ret;
 	}
 
@@ -109,7 +132,7 @@ static int __init yeeloong_init(void)
 		yeeloong_get_brightness(yeeloong_backlight_device);
 	backlight_update_status(yeeloong_backlight_device);
 
-	ret = yeeloong_lid_setup();
+	ret = yeeloong_sci_setup();
 	if (ret)
 		return ret;
 
@@ -125,9 +148,9 @@ static void __exit yeeloong_exit(void)
 		backlight_device_unregister(yeeloong_backlight_device);
 	yeeloong_backlight_device = NULL;
 
-	if (yeeloong_lid_dev)
-		input_unregister_device(yeeloong_lid_dev);
-	yeeloong_lid_dev = NULL;
+	if (yeeloong_sci_dev)
+		input_unregister_device(yeeloong_sci_dev);
+	yeeloong_sci_dev = NULL;
 
 }
 
