@@ -5,13 +5,12 @@
 obj-$(CONFIG_EC_KB3310B) += \
 	ec_miscd.o \
 	ec_batd.o \
-	ec_ftd.o \
 	ec_scid.o \
 	yeeloong_laptopd.o
 
 ec_miscd-objs	:= ec_misc.o
 ec_batd-objs	:= ec_bat.o
-ec_ftd-objs	:= ec_ft.o
+#ec_ftd-objs	:= ec_ft.o
 ec_scid-objs	:= ec_sci.o
 yeeloong_laptopd-objs	:= yeeloong_laptop.o
 
