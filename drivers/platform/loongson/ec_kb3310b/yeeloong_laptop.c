@@ -23,6 +23,8 @@
 
 #define MAX_BRIGHTNESS 8
 
+static int hotkey_status = -1;
+
 static int yeeloong_set_brightness(struct backlight_device *bd)
 {
 	unsigned int level;
@@ -53,66 +55,172 @@ static struct backlight_ops yeeloong_ops = {
 
 static struct backlight_device *yeeloong_backlight_device;
 
-static struct input_dev *yeeloong_sci_dev;
+static struct input_dev *yeeloong_input_device;
+
+struct key_entry {
+	char type;		/* See KE_* below */
+	int event;		/* event from SCI */
+	u16 keycode;		/* KEY_* or SW_* */
+};
+
+enum { KE_KEY, KE_SW, KE_END };
+
+static struct key_entry yeeloong_keymap[] = {
+	{KE_SW, SCI_EVENT_NUM_LID, SW_LID},
+	/* CRT_DETECT should be SW_VIDEOOUT_INSERT, not included in hald-addon-input! */
+	{KE_KEY, SCI_EVENT_NUM_CRT_DETECT, KEY_PROG1},
+	/* no specific KEY_ found for overtemp! this should be reported in the batter subdriver */
+	{KE_KEY, SCI_EVENT_NUM_OVERTEMP, KEY_PROG2},
+	{KE_KEY, SCI_EVENT_NUM_AC_BAT, KEY_BATTERY},
+	{KE_KEY, SCI_EVENT_NUM_CAMERA, KEY_CAMERA},  /* Fn + ESC */
+	{KE_KEY, SCI_EVENT_NUM_SLEEP, KEY_SLEEP},    /* Fn + F1 */
+	/* BLACK_SCREEN should be KEY_DISPLAYTOGGLE, but not included in hald-addon-input yet!! */
+	{KE_KEY, SCI_EVENT_NUM_BLACK_SCREEN, KEY_PROG3}, /* Fn + F2 */
+	{KE_KEY, SCI_EVENT_NUM_DISPLAY_TOGGLE, KEY_SWITCHVIDEOMODE}, /* Fn + F3 */
+	{KE_KEY, SCI_EVENT_NUM_AUDIO_MUTE, KEY_MUTE}, /* Fn + F4 */
+	{KE_KEY, SCI_EVENT_NUM_WLAN, KEY_WLAN}, /* Fn + F5 */
+	{KE_KEY, SCI_EVENT_NUM_DISPLAY_BRIGHTNESS, KEY_BRIGHTNESSUP}, /* Fn + up */
+	{KE_KEY, SCI_EVENT_NUM_DISPLAY_BRIGHTNESS, KEY_BRIGHTNESSDOWN}, /* Fn + down */
+	{KE_KEY, SCI_EVENT_NUM_AUDIO_VOLUME, KEY_VOLUMEUP},	/* Fn + right */
+	{KE_KEY, SCI_EVENT_NUM_AUDIO_VOLUME, KEY_VOLUMEDOWN},	/* Fn + left */
+	{KE_END, 0}
+};
 
 /* This should be called in the SCI interrupt handler and the LID open action
  * wakeup function in pm.c
  */
 void yeeloong_lid_update_status(int status)
 {
-	input_report_switch(yeeloong_sci_dev, SW_LID, !status);
-	input_sync(yeeloong_sci_dev);
+	printk(KERN_INFO "sw: %d\n", SW_LID);
+
+	input_report_switch(yeeloong_input_device, SW_LID, !status);
+	input_sync(yeeloong_input_device);
 }
 EXPORT_SYMBOL(yeeloong_lid_update_status);
 
-void yeeloong_sci_update_status(int event, int status)
+static void yeeloong_hotkey_update_status(int key)
 {
-	switch (event) {
-	case SCI_EVENT_NUM_LID:
-		yeeloong_lid_update_status(status);
-		break;
-	case SCI_EVENT_NUM_SLEEP:
-		input_report_key(yeeloong_sci_dev, KEY_SLEEP, 1);
-		input_sync(yeeloong_sci_dev);
-		input_report_key(yeeloong_sci_dev, KEY_SLEEP, 0);
-		input_sync(yeeloong_sci_dev);
-		break;
-	default:
-		break;
-	}
-}
-EXPORT_SYMBOL(yeeloong_sci_update_status);
+	printk(KERN_INFO "key: %d\n", key);
 
-static int __init yeeloong_sci_setup(void)
+	input_report_key(yeeloong_input_device, key, 1);
+	input_sync(yeeloong_input_device);
+	input_report_key(yeeloong_input_device, key, 0);
+	input_sync(yeeloong_input_device);
+}
+
+void yeeloong_input_update_status(int event, int status)
+{
+	static int old_brightness_status = -1, old_volume_status = -1;
+	struct key_entry *key;
+
+	for (key = yeeloong_keymap; key->type != KE_END; key++) {
+		if (key->event != event)
+			continue;
+		else {
+			switch (event) {
+			case SCI_EVENT_NUM_LID:
+				yeeloong_lid_update_status(status);
+				return;
+			case SCI_EVENT_NUM_DISPLAY_BRIGHTNESS:
+				/* current status is higher than the old one, means up */
+				if ((status < old_brightness_status) || (status == 0))
+					key++;
+				old_brightness_status = status;
+				break;
+			case SCI_EVENT_NUM_AUDIO_VOLUME:
+				if ((status < old_volume_status) || (status == 0))
+					key++;
+				old_volume_status = status;
+				break;
+			case SCI_EVENT_NUM_AC_BAT:
+				/* only report Power Adapter when inserted */
+				if (status != 1)
+					return;
+				break;
+			default:
+				break;
+			}
+			yeeloong_hotkey_update_status(key->keycode);
+			break;
+		}
+	}
+	/* update the global hotkey_status */
+	hotkey_status = status;
+
+	printk(KERN_INFO "event: %d, status: %d\n", event, status);
+}
+EXPORT_SYMBOL(yeeloong_input_update_status);
+
+static int __init yeeloong_input_setup(void)
 {
 	int ret;
+	struct key_entry *key;
 
-	yeeloong_sci_dev = input_allocate_device();
+	yeeloong_input_device = input_allocate_device();
 
-	if (!yeeloong_sci_dev)
+	if (!yeeloong_input_device)
 		return -ENOMEM;
 
-	yeeloong_sci_dev->name = "YeeLoong HotKeys(Fn+Fx/left/right/up/down)";
-	yeeloong_sci_dev->phys = "button/input0";
-	yeeloong_sci_dev->id.bustype = BUS_HOST;
-	yeeloong_sci_dev->dev.parent = NULL;
+	yeeloong_input_device->name = "YeeLoong HotKeys(Fn+Fx/left/right/up/down)";
+	yeeloong_input_device->phys = "button/input0";
+	yeeloong_input_device->id.bustype = BUS_HOST;
+	yeeloong_input_device->dev.parent = NULL;
 
-	/* lid switch */
-	set_bit(EV_SW, yeeloong_sci_dev->evbit);
-	set_bit(SW_LID, yeeloong_sci_dev->swbit);
+	for (key = yeeloong_keymap; key->type != KE_END; key++) {
+		switch (key->type) {
+		case KE_KEY:
+			set_bit(EV_KEY, yeeloong_input_device->evbit);
+			set_bit(key->keycode, yeeloong_input_device->keybit);
+			break;
+		case KE_SW:
+			set_bit(EV_SW, yeeloong_input_device->evbit);
+			set_bit(key->keycode, yeeloong_input_device->swbit);
+			break;
+		}
+	}
 
-	/* sleep/suspend: STD */
-	set_bit(EV_KEY, yeeloong_sci_dev->evbit);
-	set_bit(KEY_SLEEP, yeeloong_sci_dev->keybit);
-
-	ret = input_register_device(yeeloong_sci_dev);
+	ret = input_register_device(yeeloong_input_device);
 	if (ret) {
-		input_free_device(yeeloong_sci_dev);
+		input_free_device(yeeloong_input_device);
 		return ret;
 	}
 
 	return 0;
 }
+
+static struct platform_driver platform_driver = {
+	.driver = {
+		.name = "yeeloong-laptop",
+		.owner = THIS_MODULE,
+	}
+};
+
+static struct platform_device *platform_device;
+
+static ssize_t
+ignore_store(struct device *dev,
+	     struct device_attribute *attr, const char *buf, size_t count)
+{
+	return count;
+}
+
+static ssize_t
+show_hotkey_status(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", hotkey_status);
+}
+
+static DEVICE_ATTR(hotkey, 0444, show_hotkey_status, ignore_store);
+
+static struct attribute *platform_attributes[] = {
+	&dev_attr_hotkey.attr,
+	NULL
+};
+
+static struct attribute_group platform_attribute_group = {
+	.attrs = platform_attributes
+};
 
 /*
  * Hwmon
@@ -295,11 +403,12 @@ static int __init yeeloong_init(void)
 		yeeloong_get_brightness(yeeloong_backlight_device);
 	backlight_update_status(yeeloong_backlight_device);
 
-	ret = yeeloong_sci_setup();
+	/* hotkey */
+	ret = yeeloong_input_setup();
 	if (ret)
 		return ret;
 
-	/* update the current state of lid */
+	/* update the current status of lid */
 	yeeloong_lid_update_status(BIT_LID_DETECT_ON);
 
 	/* sensors */
@@ -334,6 +443,28 @@ static int __init yeeloong_init(void)
 		yeeloong_sensors_device = NULL;
 	}
 
+	/* Register platform stuff */
+	ret = platform_driver_register(&platform_driver);
+	if (ret)
+		return ret;
+	platform_device = platform_device_alloc("yeeloong-laptop", -1);
+	if (!platform_device) {
+		ret = -ENOMEM;
+		platform_driver_unregister(&platform_driver);
+		return ret;
+	}
+	ret = platform_device_add(platform_device);
+	if (ret) {
+		platform_device_put(platform_device);
+		return ret;
+	}
+	ret = sysfs_create_group(&platform_device->dev.kobj,
+				    &platform_attribute_group);
+	if (ret) {
+		platform_device_del(platform_device);
+		return ret;
+	}
+
 	return 0;
 }
 
@@ -343,9 +474,11 @@ static void __exit yeeloong_exit(void)
 		backlight_device_unregister(yeeloong_backlight_device);
 	yeeloong_backlight_device = NULL;
 
-	if (yeeloong_sci_dev)
-		input_unregister_device(yeeloong_sci_dev);
-	yeeloong_sci_dev = NULL;
+	if (yeeloong_input_device)
+		input_unregister_device(yeeloong_input_device);
+	yeeloong_input_device = NULL;
+
+
 
 	if (yeeloong_sensors_device) {
 		sysfs_remove_group(&yeeloong_sensors_device->kobj,
@@ -357,6 +490,10 @@ static void __exit yeeloong_exit(void)
 		platform_device_unregister(yeeloong_sensors_pdev);
 	yeeloong_sensors_pdev = NULL;
 
+	sysfs_remove_group(&platform_device->dev.kobj,
+			   &platform_attribute_group);
+	platform_device_unregister(platform_device);
+	platform_driver_unregister(&platform_driver);
 }
 
 module_init(yeeloong_init);

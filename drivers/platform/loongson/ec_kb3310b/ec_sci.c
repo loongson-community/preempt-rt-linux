@@ -545,7 +545,7 @@ static int sci_parse_num(struct sci_device *sci_device)
 	return 0;
 }
 
-extern void yeeloong_sci_update_status(int event, int status);
+extern void yeeloong_input_update_status(int event, int status);
 
 /*
  * sci_int_routine : sci main interrupt routine
@@ -585,7 +585,7 @@ static irqreturn_t sci_int_routine(int irq, void *dev_id)
 		PRINTK_DBG("ret 3: %d\n", ret);
 		if (!ret) {
 			/* update buttons(Fn+Fx/left/right/up/down) status */
-			yeeloong_sci_update_status(sci_device->sci_number, sci_device->sci_parameter);
+			yeeloong_input_update_status(sci_device->sci_number, sci_device->sci_parameter);
 			sci_device->irq_data = 1;
 		} else
 			sci_device->irq_data = 0;
