@@ -352,7 +352,7 @@ CREATE_SENSOR_ATTR(temp1_input, S_IRUGO,
 static ssize_t
 show_name(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "yeeloong_laptop\n");
+	return sprintf(buf, "yeeloong\n");
 }
 static SENSOR_DEVICE_ATTR(name, S_IRUGO, show_name, NULL, 0);
 
