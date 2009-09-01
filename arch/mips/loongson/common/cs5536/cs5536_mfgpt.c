@@ -27,7 +27,7 @@
 
 #include <cs5536/cs5536_mfgpt.h>
 
-DEFINE_SPINLOCK(mfgpt_lock);
+DEFINE_ATOMIC_SPINLOCK(mfgpt_lock);
 EXPORT_SYMBOL(mfgpt_lock);
 
 u32 mfgpt_base;
@@ -71,7 +71,7 @@ EXPORT_SYMBOL(enable_mfgpt0_counter);
 static void init_mfgpt_timer(enum clock_event_mode mode,
 			     struct clock_event_device *evt)
 {
-	spin_lock(&mfgpt_lock);
+	atomic_spin_lock(&mfgpt_lock);
 
 	switch (mode) {
 	case CLOCK_EVT_MODE_PERIODIC:
@@ -96,7 +96,7 @@ static void init_mfgpt_timer(enum clock_event_mode mode,
 		/* Nothing to do here */
 		break;
 	}
-	spin_unlock(&mfgpt_lock);
+	atomic_spin_unlock(&mfgpt_lock);
 }
 
 /*
@@ -106,10 +106,10 @@ static void init_mfgpt_timer(enum clock_event_mode mode,
  */
 static int mfgpt_next_event(unsigned long delta, struct clock_event_device *evt)
 {
-	spin_lock(&mfgpt_lock);
+	atomic_spin_lock(&mfgpt_lock);
 	outw(delta & 0xffff, MFGPT0_CMP2);	/* set comparator2 */
 	outw(0, MFGPT0_CNT);	/* set counter to 0 */
-	spin_unlock(&mfgpt_lock);
+	atomic_spin_unlock(&mfgpt_lock);
 
 	return 0;
 }
@@ -192,7 +192,7 @@ static cycle_t mfgpt_read(struct clocksource *cs)
 	static int old_count;
 	static u32 old_jifs;
 
-	spin_lock_irqsave(&mfgpt_lock, flags);
+	atomic_spin_lock_irqsave(&mfgpt_lock, flags);
 	/*
 	 * Although our caller may have the read side of xtime_lock,
 	 * this is now a seqlock, and we are cheating in this routine
@@ -226,7 +226,7 @@ static cycle_t mfgpt_read(struct clocksource *cs)
 	old_count = count;
 	old_jifs = jifs;
 
-	spin_unlock_irqrestore(&mfgpt_lock, flags);
+	atomic_spin_unlock_irqrestore(&mfgpt_lock, flags);
 
 	return (cycle_t) (jifs * COMPARE) + count;
 }

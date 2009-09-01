@@ -56,12 +56,13 @@ static irqreturn_t ip6_action(int cpl, void *dev_id)
 struct irqaction ip6_irqaction = {
 	.handler = ip6_action,
 	.name = "cascade",
-	.flags = IRQF_SHARED,
+	.flags = IRQF_SHARED | IRQF_NODELAY,
 };
 
 struct irqaction cascade_irqaction = {
 	.handler = no_action,
 	.name = "cascade",
+	.flags = IRQF_NODELAY,
 };
 
 void __init arch_init_irq(void)
