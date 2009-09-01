@@ -2191,6 +2191,8 @@ source "kernel/power/Kconfig"
 
 endmenu
 
+if !PREEMPT_RT
+
 menu "CPU Frequency scaling"
 
 source "drivers/cpufreq/Kconfig"
@@ -2209,6 +2211,7 @@ config LOONGSON2F_CPU_FREQ
 	  If unsure, say N.
 
 endmenu
+endif	# PREEMPT_RT
 
 source "net/Kconfig"
 
