@@ -66,7 +66,8 @@
 #define MACH_LEMOTE_FL2F       2
 #define MACH_LEMOTE_YL2F89     3
 #define MACH_LEMOTE_YL2F7      4
-#define MACH_LOONGSON_END      5
+#define MACH_LEMOTE_FL2FNAS    5
+#define MACH_LOONGSON_END      6
 
 #define CL_SIZE			COMMAND_LINE_SIZE
 
