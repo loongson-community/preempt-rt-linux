@@ -151,7 +151,7 @@ void yeeloong_input_update_status(int event, int status)
 }
 EXPORT_SYMBOL(yeeloong_input_update_status);
 
-static int __init yeeloong_input_setup(void)
+static int __init yeeloong_input_setup(struct device *dev)
 {
 	int ret;
 	struct key_entry *key;
@@ -161,10 +161,10 @@ static int __init yeeloong_input_setup(void)
 	if (!yeeloong_input_device)
 		return -ENOMEM;
 
-	yeeloong_input_device->name = "YeeLoong HotKeys(Fn+Fx/left/right/up/down)";
+	yeeloong_input_device->name = "HotKeys";
 	yeeloong_input_device->phys = "button/input0";
 	yeeloong_input_device->id.bustype = BUS_HOST;
-	yeeloong_input_device->dev.parent = NULL;
+	yeeloong_input_device->dev.parent = dev;
 
 	for (key = yeeloong_keymap; key->type != KE_END; key++) {
 		switch (key->type) {
@@ -188,15 +188,6 @@ static int __init yeeloong_input_setup(void)
 	return 0;
 }
 
-static struct platform_driver platform_driver = {
-	.driver = {
-		.name = "yeeloong-laptop",
-		.owner = THIS_MODULE,
-	}
-};
-
-static struct platform_device *platform_device;
-
 static ssize_t
 ignore_store(struct device *dev,
 	     struct device_attribute *attr, const char *buf, size_t count)
@@ -211,15 +202,15 @@ show_hotkey_status(struct device *dev,
 	return sprintf(buf, "%d\n", hotkey_status);
 }
 
-static DEVICE_ATTR(hotkey, 0444, show_hotkey_status, ignore_store);
+static DEVICE_ATTR(hotkey_status, 0444, show_hotkey_status, ignore_store);
 
-static struct attribute *platform_attributes[] = {
-	&dev_attr_hotkey.attr,
+static struct attribute *hotkey_attributes[] = {
+	&dev_attr_hotkey_status.attr,
 	NULL
 };
 
-static struct attribute_group platform_attribute_group = {
-	.attrs = platform_attributes
+static struct attribute_group hotkey_attribute_group = {
+	.attrs = hotkey_attributes
 };
 
 /*
@@ -370,26 +361,44 @@ static struct attribute_group hwmon_attribute_group = {
 };
 
 struct device *yeeloong_sensors_device;
-static struct platform_device *yeeloong_sensors_pdev;
+static struct platform_device *yeeloong_pdev;
 
-static ssize_t yeeloong_sensors_pdev_name_show(struct device *dev,
+static ssize_t yeeloong_pdev_name_show(struct device *dev,
 			   struct device_attribute *attr,
 			   char *buf)
 {
-	return sprintf(buf, "yeeloong_sensors\n");
+	return sprintf(buf, "yeeloong laptop\n");
 }
 
-static struct device_attribute dev_attr_yeeloong_sensors_pdev_name =
-	__ATTR(name, S_IRUGO, yeeloong_sensors_pdev_name_show, NULL);
+static struct device_attribute dev_attr_yeeloong_pdev_name =
+	__ATTR(name, S_IRUGO, yeeloong_pdev_name_show, NULL);
 
 
 static int __init yeeloong_init(void)
 {
 	int ret;
 
+	/* yeeloong platform device */
+	yeeloong_pdev = platform_device_register_simple(
+			"yeeloong_laptop", -1, NULL, 0);
+
+	if (IS_ERR(yeeloong_pdev)) {
+		ret = PTR_ERR(yeeloong_pdev);
+		yeeloong_pdev = NULL;
+		printk(KERN_INFO "unable to register hwmon platform device\n");
+		return ret;
+	}
+	ret = device_create_file(&yeeloong_pdev->dev,
+				 &dev_attr_yeeloong_pdev_name);
+	if (ret) {
+		printk(KERN_INFO "unable to create sysfs hwmon device attributes\n");
+		return ret;
+	}
+
+	/* backlight */
 	yeeloong_backlight_device = backlight_device_register(
-		"yeeloong_backlight",
-		NULL, NULL,
+		"backlight0",
+		&yeeloong_pdev->dev, NULL,
 		&yeeloong_ops);
 
 	if (IS_ERR(yeeloong_backlight_device)) {
@@ -404,31 +413,23 @@ static int __init yeeloong_init(void)
 	backlight_update_status(yeeloong_backlight_device);
 
 	/* hotkey */
-	ret = yeeloong_input_setup();
+	ret = yeeloong_input_setup(&yeeloong_pdev->dev);
 	if (ret)
 		return ret;
-
+	ret = sysfs_create_group(&yeeloong_input_device->dev.kobj,
+				    &hotkey_attribute_group);
+	if (ret) {
+		sysfs_remove_group(&yeeloong_input_device->dev.kobj,
+			   &hotkey_attribute_group);
+		input_free_device(yeeloong_input_device);
+		yeeloong_input_device = NULL;
+	}
 	/* update the current status of lid */
 	yeeloong_lid_update_status(BIT_LID_DETECT_ON);
 
 	/* sensors */
-	yeeloong_sensors_pdev = platform_device_register_simple(
-			"yeeloong_sensors", -1, NULL, 0);
 
-	if (IS_ERR(yeeloong_sensors_pdev)) {
-		ret = PTR_ERR(yeeloong_sensors_pdev);
-		yeeloong_sensors_pdev = NULL;
-		printk(KERN_INFO "unable to register hwmon platform device\n");
-		return ret;
-	}
-	ret = device_create_file(&yeeloong_sensors_pdev->dev,
-				 &dev_attr_yeeloong_sensors_pdev_name);
-	if (ret) {
-		printk(KERN_INFO "unable to create sysfs hwmon device attributes\n");
-		return ret;
-	}
-
-	yeeloong_sensors_device = hwmon_device_register(&yeeloong_sensors_pdev->dev);
+	yeeloong_sensors_device = hwmon_device_register(&yeeloong_pdev->dev);
 	if (IS_ERR(yeeloong_sensors_device)) {
 		printk(KERN_INFO "Could not register yeeloong hwmon device\n");
 		yeeloong_sensors_device = NULL;
@@ -443,28 +444,6 @@ static int __init yeeloong_init(void)
 		yeeloong_sensors_device = NULL;
 	}
 
-	/* Register platform stuff */
-	ret = platform_driver_register(&platform_driver);
-	if (ret)
-		return ret;
-	platform_device = platform_device_alloc("yeeloong-laptop", -1);
-	if (!platform_device) {
-		ret = -ENOMEM;
-		platform_driver_unregister(&platform_driver);
-		return ret;
-	}
-	ret = platform_device_add(platform_device);
-	if (ret) {
-		platform_device_put(platform_device);
-		return ret;
-	}
-	ret = sysfs_create_group(&platform_device->dev.kobj,
-				    &platform_attribute_group);
-	if (ret) {
-		platform_device_del(platform_device);
-		return ret;
-	}
-
 	return 0;
 }
 
@@ -474,11 +453,12 @@ static void __exit yeeloong_exit(void)
 		backlight_device_unregister(yeeloong_backlight_device);
 	yeeloong_backlight_device = NULL;
 
-	if (yeeloong_input_device)
-		input_unregister_device(yeeloong_input_device);
+	if (yeeloong_input_device) {
+		sysfs_remove_group(&yeeloong_input_device->dev.kobj,
+			   &hotkey_attribute_group);
+		input_free_device(yeeloong_input_device);
+	}
 	yeeloong_input_device = NULL;
-
-
 
 	if (yeeloong_sensors_device) {
 		sysfs_remove_group(&yeeloong_sensors_device->kobj,
@@ -486,14 +466,10 @@ static void __exit yeeloong_exit(void)
 		hwmon_device_unregister(yeeloong_sensors_device);
 	}
 	yeeloong_sensors_device = NULL;
-	if (yeeloong_sensors_pdev)
-		platform_device_unregister(yeeloong_sensors_pdev);
-	yeeloong_sensors_pdev = NULL;
 
-	sysfs_remove_group(&platform_device->dev.kobj,
-			   &platform_attribute_group);
-	platform_device_unregister(platform_device);
-	platform_driver_unregister(&platform_driver);
+	if (yeeloong_pdev)
+		platform_device_unregister(yeeloong_pdev);
+	yeeloong_pdev = NULL;
 }
 
 module_init(yeeloong_init);
