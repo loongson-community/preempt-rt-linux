@@ -7,7 +7,11 @@
  *  This source code is originally from PMON, contributed by Liu Junliang and
  *  Tao Hongliang.
  *
- *  TODO: implement a standard i2c driver based on the I2C framework
+ *  TODO:
+ *    1. implement a standard i2c driver based on the I2C framework
+ *    2. Seems the following i2c functions can not access the ICS950220 clock
+ *    device on Yeeloong laptop, so, new ics950220 specific functions should be
+ *    added to access it.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -16,6 +20,7 @@
  */
 
 #include <linux/delay.h>
+#include <linux/module.h>
 
 #include <loongson.h>
 #include <cs5536/cs5536.h>
