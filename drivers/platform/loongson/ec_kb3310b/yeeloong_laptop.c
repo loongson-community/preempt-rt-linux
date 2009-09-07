@@ -17,6 +17,7 @@
 #include <linux/input.h>
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
+#include <linux/thermal.h>
 
 #include "ec.h"
 #include "ec_misc_fn.h"
@@ -373,6 +374,50 @@ static ssize_t yeeloong_pdev_name_show(struct device *dev,
 static struct device_attribute dev_attr_yeeloong_pdev_name =
 	__ATTR(name, S_IRUGO, yeeloong_pdev_name_show, NULL);
 
+/* thermal cooling device callbacks */
+static int video_get_max_state(struct thermal_cooling_device *cdev, unsigned
+			       long *state)
+{
+	*state = MAX_BRIGHTNESS;
+	return 0;
+}
+
+static int video_get_cur_state(struct thermal_cooling_device *cdev, unsigned
+			       long *state)
+{
+	static struct backlight_device *bd;
+
+	bd = (struct backlight_device *)cdev->devdata;
+
+	*state = yeeloong_get_brightness(bd);
+
+	printk(KERN_INFO "video get state: %ld\n", *state);
+
+	return 0;
+}
+
+static int video_set_cur_state(struct thermal_cooling_device *cdev, unsigned
+			       long state)
+{
+	static struct backlight_device *bd;
+
+	bd = (struct backlight_device *)cdev->devdata;
+
+	yeeloong_backlight_device->props.brightness = state;
+	backlight_update_status(bd);
+
+	printk(KERN_INFO "video set state: %ld\n", state);
+
+	return 0;
+}
+
+static struct thermal_cooling_device_ops video_cooling_ops = {
+	.get_max_state = video_get_max_state,
+	.get_cur_state = video_get_cur_state,
+	.set_cur_state = video_set_cur_state,
+};
+
+static struct thermal_cooling_device *yeeloong_thermal_cdev;
 
 static int __init yeeloong_init(void)
 {
@@ -408,9 +453,24 @@ static int __init yeeloong_init(void)
 	}
 
 	yeeloong_backlight_device->props.max_brightness = MAX_BRIGHTNESS;
-	yeeloong_backlight_device->props.brightness =
-		yeeloong_get_brightness(yeeloong_backlight_device);
+	yeeloong_backlight_device->props.brightness = MAX_BRIGHTNESS/2;
 	backlight_update_status(yeeloong_backlight_device);
+
+	yeeloong_thermal_cdev = thermal_cooling_device_register("LCD",
+		yeeloong_backlight_device, &video_cooling_ops);
+	if (IS_ERR(yeeloong_thermal_cdev)) {
+		ret = PTR_ERR(yeeloong_thermal_cdev);
+		return ret;
+	}
+	ret = sysfs_create_link(&yeeloong_backlight_device->dev.kobj,
+			&yeeloong_thermal_cdev->device.kobj,
+			"thermal_cooling");
+	if (ret)
+		printk(KERN_ERR "Create sysfs link\n");
+	ret = sysfs_create_link(&yeeloong_thermal_cdev->device.kobj,
+		&yeeloong_backlight_device->dev.kobj, "device");
+	if (ret)
+		printk(KERN_ERR "Create sysfs link\n");
 
 	/* hotkey */
 	ret = yeeloong_input_setup(&yeeloong_pdev->dev);
@@ -452,6 +512,14 @@ static void __exit yeeloong_exit(void)
 	if (yeeloong_backlight_device)
 		backlight_device_unregister(yeeloong_backlight_device);
 	yeeloong_backlight_device = NULL;
+	if (yeeloong_thermal_cdev) {
+		sysfs_remove_link(&yeeloong_backlight_device->dev.kobj,
+				  "thermal_cooling");
+		sysfs_remove_link(&yeeloong_thermal_cdev->device.kobj,
+				  "device");
+		thermal_cooling_device_unregister(yeeloong_thermal_cdev);
+		yeeloong_thermal_cdev = NULL;
+	}
 
 	if (yeeloong_input_device) {
 		sysfs_remove_group(&yeeloong_input_device->dev.kobj,

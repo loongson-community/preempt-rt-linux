@@ -19,6 +19,7 @@ config EC_KB3310B
 	depends on LEMOTE_YEELOONG2F
 	select INPUT_EVDEV
 	select HWMON
+	select THERMAL
 	default y
 	---help---
 	  This is a driver for yeeloong laptops. It adds the kb3310b support:
