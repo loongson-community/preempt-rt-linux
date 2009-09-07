@@ -20,6 +20,7 @@ config EC_KB3310B
 	select INPUT_EVDEV
 	select HWMON
 	select THERMAL
+	select VIDEO_OUTPUT_CONTROL
 	default y
 	---help---
 	  This is a driver for yeeloong laptops. It adds the kb3310b support:

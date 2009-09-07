@@ -18,6 +18,7 @@
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/thermal.h>
+#include <linux/video_output.h>
 
 #include "ec.h"
 #include "ec_misc_fn.h"
@@ -109,9 +110,21 @@ static void yeeloong_hotkey_update_status(int key)
 	input_sync(yeeloong_input_device);
 }
 
+static void lcd_video_output_update_status(int state);
+static void crt_video_output_update_status(int state);
+
+static void camera_input_update_status(int state)
+{
+	int value;
+
+	value = ec_read(REG_CAMERA_CONTROL);
+	ec_write(REG_CAMERA_CONTROL, value | (1 << 1));
+}
+
 void yeeloong_input_update_status(int event, int status)
 {
 	static int old_brightness_status = -1, old_volume_status = -1;
+	static int video_output_state;
 	struct key_entry *key;
 
 	for (key = yeeloong_keymap; key->type != KE_END; key++) {
@@ -137,6 +150,62 @@ void yeeloong_input_update_status(int event, int status)
 				/* only report Power Adapter when inserted */
 				if (status != 1)
 					return;
+				break;
+			case SCI_EVENT_NUM_CAMERA:
+				camera_input_update_status(1);
+				break;
+			case SCI_EVENT_NUM_CRT_DETECT:
+				if (ec_read(REG_CRT_DETECT)) {
+					crt_video_output_update_status(1);
+					lcd_video_output_update_status(0);
+				} else {
+					lcd_video_output_update_status(1);
+					crt_video_output_update_status(0);
+				}
+				break;
+			case SCI_EVENT_NUM_BLACK_SCREEN:
+				lcd_video_output_update_status(status);
+				break;
+			case SCI_EVENT_NUM_DISPLAY_TOGGLE:
+				/* only enable switch video output button
+				 * when CRT is connected */
+				if (!ec_read(REG_CRT_DETECT)) {
+					status = 0;
+					break;
+				}
+				/* 0. no CRT connected: LCD on, CRT off
+				 * 1. BOTH on
+				 * 2. LCD off, CRT on
+				 * 3. BOTH off
+				 * 4. LCD on, CRT off
+				 */
+				video_output_state++;
+				if (video_output_state > 4)
+					video_output_state = 1;
+
+				switch (video_output_state) {
+				case 1:
+					lcd_video_output_update_status(1);
+					crt_video_output_update_status(1);
+					break;
+				case 2:
+					lcd_video_output_update_status(0);
+					crt_video_output_update_status(1);
+					break;
+				case 3:
+					lcd_video_output_update_status(0);
+					crt_video_output_update_status(0);
+					break;
+				case 4:
+					lcd_video_output_update_status(1);
+					crt_video_output_update_status(0);
+					break;
+				default:
+					/* ensure LCD is on */
+					lcd_video_output_update_status(1);
+					break;
+				}
+				status = video_output_state;
 				break;
 			default:
 				break;
@@ -419,6 +488,95 @@ static struct thermal_cooling_device_ops video_cooling_ops = {
 
 static struct thermal_cooling_device *yeeloong_thermal_cdev;
 
+/*video output device sysfs support*/
+static int lcd_video_output_get(struct output_device *od)
+{
+	return ec_read(REG_DISPLAY_LCD);
+}
+
+static int lcd_video_output_set(struct output_device *od)
+{
+	unsigned long state = od->request_state;
+	int value;
+
+	printk(KERN_INFO "lcd video output: %ld\n", state);
+
+	if (state) {
+		/* open LCD */
+		outb(0x31, 0x3c4);
+		value = inb(0x3c5);
+		value = (value & 0xf8) | 0x03;
+		outb(0x31, 0x3c4);
+		outb(value, 0x3c5);
+		/* open backlight */
+		ec_write(REG_BACKLIGHT_CTRL, BIT_BACKLIGHT_ON);
+	} else {
+		/* close backlight */
+		ec_write(REG_BACKLIGHT_CTRL, BIT_BACKLIGHT_OFF);
+		/* close LCD */
+		outb(0x31, 0x3c4);
+		value = inb(0x3c5);
+		value = (value & 0xf8) | 0x02;
+		outb(0x31, 0x3c4);
+		outb(value, 0x3c5);
+	}
+
+	return 0;
+}
+
+static struct output_properties lcd_output_properties = {
+	.set_state = lcd_video_output_set,
+	.get_status = lcd_video_output_get,
+};
+
+static int crt_video_output_get(struct output_device *od)
+{
+	return ec_read(REG_CRT_DETECT);
+}
+
+static int crt_video_output_set(struct output_device *od)
+{
+	unsigned long state = od->request_state;
+	int value;
+
+	if (state) {
+		/* open CRT */
+		outb(0x21, 0x3c4);
+		value = inb(0x3c5);
+		value &= ~(1 << 7);
+		outb(0x21, 0x3c4);
+		outb(value, 0x3c5);
+	} else {
+		/* close CRT */
+		outb(0x21, 0x3c4);
+		value = inb(0x3c5);
+		value |= (1 << 7);
+		outb(0x21, 0x3c4);
+		outb(value, 0x3c5);
+	}
+
+	return 0;
+}
+
+static struct output_properties crt_output_properties = {
+	.set_state = crt_video_output_set,
+	.get_status = crt_video_output_get,
+};
+
+struct output_device *lcd_output_dev, *crt_output_dev;
+
+static void lcd_video_output_update_status(int state)
+{
+	lcd_output_dev->request_state = state;
+	lcd_video_output_set(lcd_output_dev);
+}
+
+static void crt_video_output_update_status(int state)
+{
+	crt_output_dev->request_state = state;
+	crt_video_output_set(crt_output_dev);
+}
+
 static int __init yeeloong_init(void)
 {
 	int ret;
@@ -472,6 +630,18 @@ static int __init yeeloong_init(void)
 	if (ret)
 		printk(KERN_ERR "Create sysfs link\n");
 
+	/* register video output device: lcd, crt */
+	lcd_output_dev = video_output_register("LCD",
+		&yeeloong_pdev->dev, NULL, &lcd_output_properties);
+	/* ensure LCD is on by default */
+	lcd_video_output_update_status(1);
+
+	crt_output_dev = video_output_register("CRT",
+		&yeeloong_pdev->dev, NULL, &crt_output_properties);
+	/* close CRT by default, and will be enabled
+	 * when the CRT connectting event reported by SCI */
+	crt_video_output_update_status(0);
+
 	/* hotkey */
 	ret = yeeloong_input_setup(&yeeloong_pdev->dev);
 	if (ret)
@@ -520,6 +690,8 @@ static void __exit yeeloong_exit(void)
 		thermal_cooling_device_unregister(yeeloong_thermal_cdev);
 		yeeloong_thermal_cdev = NULL;
 	}
+	video_output_unregister(lcd_output_dev);
+	video_output_unregister(crt_output_dev);
 
 	if (yeeloong_input_device) {
 		sysfs_remove_group(&yeeloong_input_device->dev.kobj,
