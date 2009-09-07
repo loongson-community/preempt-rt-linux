@@ -19,6 +19,9 @@
 #include <linux/hwmon-sysfs.h>
 #include <linux/thermal.h>
 #include <linux/video_output.h>
+#include <linux/pm.h>
+
+#include <loongson.h>
 
 #include "ec.h"
 #include "ec_misc_fn.h"
@@ -119,6 +122,17 @@ static void camera_input_update_status(int state)
 
 	value = ec_read(REG_CAMERA_CONTROL);
 	ec_write(REG_CAMERA_CONTROL, value | (1 << 1));
+}
+
+static void usb_ports_update_status(int state)
+{
+	int value;
+
+	value = !!state;
+
+	ec_write(0xf461, value);
+	ec_write(0xf462, value);
+	ec_write(0xf463, value);
 }
 
 void yeeloong_input_update_status(int event, int status)
@@ -431,17 +445,6 @@ static struct attribute_group hwmon_attribute_group = {
 };
 
 struct device *yeeloong_sensors_device;
-static struct platform_device *yeeloong_pdev;
-
-static ssize_t yeeloong_pdev_name_show(struct device *dev,
-			   struct device_attribute *attr,
-			   char *buf)
-{
-	return sprintf(buf, "yeeloong laptop\n");
-}
-
-static struct device_attribute dev_attr_yeeloong_pdev_name =
-	__ATTR(name, S_IRUGO, yeeloong_pdev_name_show, NULL);
 
 /* thermal cooling device callbacks */
 static int video_get_max_state(struct thermal_cooling_device *cdev, unsigned
@@ -577,13 +580,100 @@ static void crt_video_output_update_status(int state)
 	crt_video_output_set(crt_output_dev);
 }
 
+#ifdef CONFIG_SUSPEND
+
+static int cached_camera_status;
+
+static int yeeloong_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	printk(KERN_INFO "yeeloong specific suspend\n");
+
+	/* close LCD */
+	lcd_video_output_update_status(0);
+	/* close CRT */
+	crt_video_output_update_status(0);
+	/* power off camera */
+	cached_camera_status = ec_read(REG_CAMERA_STATUS);
+	if (cached_camera_status)
+		camera_input_update_status(1);
+	/* poweroff three usb ports */
+	usb_ports_update_status(0);
+	/* minimize the speed of FAN */
+	yeeloong_set_fan_pwm_enable(1);
+	yeeloong_set_fan_pwm(1);
+
+	return 0;
+}
+
+static int yeeloong_resume(struct platform_device *pdev)
+{
+	printk(KERN_INFO "yeeloong specific resume\n");
+
+	lcd_video_output_update_status(1);
+	crt_video_output_update_status(1);
+
+	/* power on three usb ports */
+	usb_ports_update_status(1);
+
+	if (cached_camera_status)
+		camera_input_update_status(1);
+	/* resume fan to auto mode */
+	yeeloong_set_fan_pwm_enable(0);
+
+	return 0;
+}
+#else
+static int yeeloong_suspend(struct platform_device *pdev, pm_message_t state)
+{
+}
+static int yeeloong_resume(struct platform_device *pdev)
+{
+}
+#endif
+
+static struct platform_driver platform_driver = {
+	.driver = {
+		.name = "yeeloong-laptop",
+		.owner = THIS_MODULE,
+	},
+#ifdef CONFIG_PM
+	.suspend = yeeloong_suspend,
+	.resume = yeeloong_resume,
+#endif
+};
+
+static struct platform_device *yeeloong_pdev;
+
+static ssize_t yeeloong_pdev_name_show(struct device *dev,
+			   struct device_attribute *attr,
+			   char *buf)
+{
+	return sprintf(buf, "yeeloong laptop\n");
+}
+
+static struct device_attribute dev_attr_yeeloong_pdev_name =
+	__ATTR(name, S_IRUGO, yeeloong_pdev_name_show, NULL);
+
+
 static int __init yeeloong_init(void)
 {
 	int ret;
 
-	/* yeeloong platform device */
-	yeeloong_pdev = platform_device_register_simple(
-			"yeeloong_laptop", -1, NULL, 0);
+	/* Register platform stuff */
+	ret = platform_driver_register(&platform_driver);
+	if (ret)
+		return ret;
+	yeeloong_pdev = platform_device_alloc("yeeloong-laptop", -1);
+	if (!yeeloong_pdev) {
+		ret = -ENOMEM;
+		platform_driver_unregister(&platform_driver);
+		return ret;
+	}
+	ret = platform_device_add(yeeloong_pdev);
+	if (ret) {
+		platform_device_put(yeeloong_pdev);
+		return ret;
+	}
 
 	if (IS_ERR(yeeloong_pdev)) {
 		ret = PTR_ERR(yeeloong_pdev);
@@ -673,6 +763,8 @@ static int __init yeeloong_init(void)
 		hwmon_device_unregister(yeeloong_sensors_device);
 		yeeloong_sensors_device = NULL;
 	}
+	/* ensure fan is set to auto mode */
+	yeeloong_set_fan_pwm_enable(0);
 
 	return 0;
 }
@@ -710,6 +802,7 @@ static void __exit yeeloong_exit(void)
 	if (yeeloong_pdev)
 		platform_device_unregister(yeeloong_pdev);
 	yeeloong_pdev = NULL;
+	platform_driver_unregister(&platform_driver);
 }
 
 module_init(yeeloong_init);

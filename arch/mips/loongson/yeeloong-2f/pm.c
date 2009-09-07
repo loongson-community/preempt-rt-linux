@@ -20,10 +20,6 @@
 
 #include <loongson.h>
 
-#ifdef CONFIG_CS5536_MFGPT
-#include <cs5536/cs5536_mfgpt.h>
-#endif
-
 #include "../../../../drivers/platform/loongson/ec_kb3310b/ec.h"
 #include "../../../../drivers/platform/loongson/ec_kb3310b/ec_misc_fn.h"
 
@@ -188,100 +184,39 @@ static void loongson_suspend_enter(void)
 	mmiowb();
 }
 
-static unsigned int cached_camera_status;
-static unsigned int cached_mute_status;
+/*
+ * NOTE: we can not disable mfgpt timer in a platform driver, because the
+ * system will "hang" there when it try to do msleep() via
+ * schedule_timeout_interruptible() before resuming. if there is no timer, the
+ * system will just hang ther all the time.
+ */
+
+#ifdef CONFIG_CS5536_MFGPT
+#include <cs5536/cs5536_mfgpt.h>
+static void mfgpt_update_status(int enable)
+{
+	if (enable) {
+		outw(COMPARE, MFGPT0_CMP2);	/* set comparator2 */
+		outw(0, MFGPT0_CNT);		/* set counter to 0 */
+		/* enable counter, comparator2 to event mode, 14.318MHz clock */
+		outw(0xe310, MFGPT0_SETUP);
+	} else /* disable counter */
+		outw(inw(MFGPT0_SETUP) & 0x7fff, MFGPT0_SETUP);
+}
+#else
+static void mfgpt_update_status(int enable)
+{
+}
+#endif
 
 static void mach_suspend(void)
 {
-	unsigned int value;
-
-	/* LCD backlight off */
-	ec_write(REG_BACKLIGHT_CTRL, BIT_BACKLIGHT_OFF);
-
-	/* close lcd output */
-	outb(0x31, 0x3c4);
-	value = inb(0x3c5);
-	value = (value & 0xf8) | 0x02;
-	outb(0x31, 0x3c4);
-	outb(value, 0x3c5);
-
-	/* close vga output */
-	outb(0x21, 0x3c4);
-	value = inb(0x3c5);
-	value |= (1 << 7);
-	outb(0x21, 0x3c4);
-	outb(value, 0x3c5);
-
-	/* poweroff three usb ports */
-	ec_write(0xf461, 0x00);
-	ec_write(0xf462, 0x00);
-	ec_write(0xf463, 0x00);
-
-	/* poweroff camera */
-	cached_camera_status = ec_read(REG_CAMERA_STATUS);
-	if (cached_camera_status) {
-		value = ec_read(REG_CAMERA_CONTROL);
-		ec_write(REG_CAMERA_CONTROL, value | (1 << 1));
-	}
-
-	/* MUTE */
-	cached_mute_status = ec_read(REG_AUDIO_MUTE);
-	ec_write(REG_AUDIO_MUTE, BIT_AUDIO_MUTE_ON);
-
-	/* minimize the speed of FAN */
-	ec_write(0xf459, 1);	/* change the fan to manual mode */
-	ec_write(0xf4cc, 1);	/* change the speed to the lowest one, not turn it off */
-
-#ifdef CONFIG_CS5536_MFGPT
-	/* stop counting of cs5536 mfgpt timer */
-	outw(inw(MFGPT0_SETUP) | (1 << 11) , MFGPT0_SETUP);
-#endif
+	mfgpt_update_status(0);
 }
 
 static void mach_resume(void)
 {
-	unsigned int value;
-
-	/* LCD backlight on */
-	ec_write(REG_BACKLIGHT_CTRL, BIT_BACKLIGHT_ON);
-
-	/* open lcd output */
-	outb(0x31, 0x3c4);
-	value = inb(0x3c5);
-	value = (value & 0xf8) | 0x03;
-	outb(0x31, 0x3c4);
-	outb(value, 0x3c5);
-
-	/* open vga output */
-	outb(0x21, 0x3c4);
-	value = inb(0x3c5);
-	value &= ~(1 << 7);
-	outb(0x21, 0x3c4);
-	outb(value, 0x3c5);
-
-	/* there is a need to enable the bonito interrupt here to fix the
-	 * problem of powering on usb ports */
-	LOONGSON_INTENSET = cached_bonito_irq_mask;
-	(void)LOONGSON_INTENSET;
-	mmiowb();
-	/* power on three usb ports */
-	ec_write(0xf461, 0x01);
-	ec_write(0xf462, 0x01);
-	ec_write(0xf463, 0x01);
-
-	/* resume camera */
-	ec_write(REG_CAMERA_CONTROL, cached_camera_status);
-
-	/* resume the status of mute */
-	ec_write(REG_AUDIO_MUTE, cached_mute_status);
-
-	/* resume FAN */
-	ec_write(0xf459, 0);	/* change the fan to auto mode */
-
-#ifdef CONFIG_CS5536_MFGPT
-	/* enable counting of cs5536 mfgpt timer */
-	outw(inw(MFGPT0_SETUP) & ~(1 << 11) , MFGPT0_SETUP);
-#endif
+	mfgpt_update_status(1);
 }
 
 static int loongson_pm_enter(suspend_state_t state)
