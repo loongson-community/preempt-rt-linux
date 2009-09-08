@@ -438,6 +438,7 @@ config RTL8187B
 	tristate "Realtek 8187B wifi support for yeeloong2f laptop"
 	depends on MAC80211 && USB && WLAN_80211 && LEMOTE_YEELOONG2F
 	select EEPROM_93CX6
+	select RFKILL
 	---help---
 	  This is a driver for RTL8187B based cards, this driver is especially
 	  for yeeloon2f laptop.

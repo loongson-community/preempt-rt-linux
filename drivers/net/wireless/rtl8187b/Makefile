@@ -8,6 +8,7 @@ rtl8187b-objs := r8187_core.o \
 	r8180_pm.o \
 	r8180_dm.o \
 	r8187_led.o \
+	r8187_rfkill.o \
 	ieee80211/dot11d.o \
 	ieee80211/ieee80211_softmac.o \
 	ieee80211/ieee80211_rx.o \

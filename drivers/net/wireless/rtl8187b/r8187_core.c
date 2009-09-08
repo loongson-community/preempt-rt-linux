@@ -55,14 +55,14 @@
 //#define CONFIG_SOFT_BEACON
 //#define DEBUG_RW_REGISTER
 
-#include <linux/dmapool.h>
-
 #include "r8180_hw.h"
 #include "r8187.h"
 #include "r8180_rtl8225.h" /* RTL8225 Radio frontend */
 #include "r8180_93cx6.h"   /* Card EEPROM */
 #include "r8180_wx.h"
 #include "r8180_dm.h"
+
+#include <linux/dmapool.h>
 
 #include <linux/usb.h>
 // FIXME: check if 2.6.7 is ok
@@ -6720,6 +6720,8 @@ static const struct net_device_ops rtl8187_netdev_ops = {
 	.ndo_get_stats		= rtl8180_stats,
 };
 
+extern int __init r8187b_rfkill_init(struct net_device *dev);
+
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,5,0)
 static int __devinit rtl8187_usb_probe(struct usb_interface *intf,
 			 const struct usb_device_id *id)
@@ -6805,6 +6807,8 @@ static void * __devinit rtl8187_usb_probe(struct usb_device *udev,
 //by lizhaoming for Radio power on/off
 #ifdef POLLING_METHOD_FOR_RADIO
 	if(priv->polling_timer_on == 0){//add for S3/S4
+		/* init rfkill */
+		r8187b_rfkill_init(dev);
 		gpio_change_polling((unsigned long)dev);
 	}
 #endif
@@ -6958,6 +6962,7 @@ static int __init rtl8187_usb_module_init(void)
 	return usb_register(&rtl8187_usb_driver);
 }
 
+extern void __exit r8187b_rfkill_exit(void);
 
 static void __exit rtl8187_usb_module_exit(void)
 {
@@ -6967,6 +6972,7 @@ static void __exit rtl8187_usb_module_exit(void)
 	ieee80211_crypto_ccmp_exit();
 	ieee80211_crypto_wep_exit();
 	ieee80211_crypto_deinit();
+	r8187b_rfkill_exit();
 
 	DMESG("Exiting\n");
 }
@@ -7043,6 +7049,8 @@ void setKey(struct net_device *dev,
             --------------------------- RF power on/power off -----------------
 *****************************************************************************/
 
+extern int r8187b_wifi_report_state(r8180_priv *priv);
+
 #ifdef POLLING_METHOD_FOR_RADIO
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20))
 void GPIOChangeRFWorkItemCallBack(struct work_struct *work)
@@ -7064,10 +7072,6 @@ void GPIOChangeRFWorkItemCallBack(struct ieee80211_device *ieee)
 	//u8 btConfig0;
 	RT_RF_POWER_STATE	eRfPowerStateToSet;
 	bool 	bActuallySet=false;
-
-	char *argv[3];
-        static char *RadioPowerPath = "/etc/acpi/events/RadioPower.sh";
-        static char *envp[] = {"HOME=/", "TERM=linux", "PATH=/usr/bin:/bin", NULL};
 
 #if 0	
 	if(priv->up == 0)//driver stopped
@@ -7151,19 +7155,8 @@ void GPIOChangeRFWorkItemCallBack(struct ieee80211_device *ieee)
 
 				MgntActSet_RF_State(dev, eRfPowerStateToSet, RF_CHANGE_BY_HW);
 
-				/* To update the UI status for Power status changed */
-                                if(priv->ieee80211->bHwRadioOff == true)
-                                        argv[1] = "RFOFF";
-                                else{
-					//if(priv->eInactivePowerState != eRfOff)
-						argv[1] = "RFON";
-					//else
-					//	argv[1] = "RFOFF";
-                                }
-                                argv[0] = RadioPowerPath;
-                                argv[2] = NULL;
-
-                                call_usermodehelper(RadioPowerPath,argv,envp,1);
+				/* report the rfkill state to the user-space via uevent interface */
+				r8187b_wifi_report_state(priv);
 			}
 			
 		}
