@@ -4321,17 +4321,6 @@ static void rtl8180_set_channel_map(u8 channel_plan, struct ieee80211_device *ie
 #endif
 
 
-//Add for RF power on power off by lizhaoming 080512
-#ifdef POLLING_METHOD_FOR_RADIO
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20))
-void GPIOChangeRFWorkItemCallBack(struct work_struct *work);
-#else
-void GPIOChangeRFWorkItemCallBack(struct ieee80211_device *ieee);
-#endif
-void gpio_change_polling(unsigned long data);
-#endif
-
-
 static void rtl8180_link_detect_init(plink_detect_t plink_detect)
 {
 	memset(plink_detect, 0, sizeof(link_detect_t));
@@ -4553,11 +4542,6 @@ short rtl8180_init(struct net_device *dev)
 	priv->ieee80211->iw_mode = IW_MODE_INFRA;
 //test pending bug, john 20070815
 	for(i=0;i<0x10;i++)  atomic_set(&(priv->tx_pending[i]), 0);
-//by lizhaoming
-#ifdef POLLING_METHOD_FOR_RADIO
-	priv->wlan_first_up_flag1 = 0;
-	priv->polling_timer_on = 0;//add for S3/S4
-#endif	
 //by lizhaoming for LED
 #ifdef LED
 	priv->ieee80211->ieee80211_led_contorl = LedControl8187;
@@ -4611,11 +4595,6 @@ short rtl8180_init(struct net_device *dev)
 	INIT_DELAYED_WORK(&priv->ieee80211->watch_dog_wq,(void*)rtl8180_watch_dog_wq);
 	INIT_DELAYED_WORK(&priv->ieee80211->tx_pw_wq,(void*)rtl8180_tx_pw_wq);
 
-//add for RF power on power off by lizhaoming 080512
-#ifdef POLLING_METHOD_FOR_RADIO
-	INIT_DELAYED_WORK(&priv->ieee80211->GPIOChangeRFWorkItem, (void*)GPIOChangeRFWorkItemCallBack);
-#endif
-
 #ifdef SW_ANTE_DIVERSITY
 	INIT_DELAYED_WORK(&priv->ieee80211->SwAntennaWorkItem,(void*) SwAntennaWorkItemCallback);
 #endif
@@ -4627,11 +4606,6 @@ short rtl8180_init(struct net_device *dev)
 	INIT_WORK(&priv->ieee80211->hw_dig_wq,(void*)rtl8180_hw_dig_wq,dev);
 	INIT_WORK(&priv->ieee80211->watch_dog_wq,(void*)rtl8180_watch_dog_wq,dev);
 	INIT_WORK(&priv->ieee80211->tx_pw_wq,(void*)rtl8180_tx_pw_wq,dev);
-
-//add for RF power on power off by lizhaoming 080512
-#ifdef POLLING_METHOD_FOR_RADIO
-	INIT_WORK(&priv->ieee80211->GPIOChangeRFWorkItem,(void*) GPIOChangeRFWorkItemCallBack, priv->ieee80211);
-#endif
 
 #ifdef SW_ANTE_DIVERSITY
 	INIT_WORK(&priv->ieee80211->SwAntennaWorkItem,(void*) SwAntennaWorkItemCallback, dev);
@@ -4651,12 +4625,6 @@ short rtl8180_init(struct net_device *dev)
 	tasklet_init(&priv->irq_rx_tasklet,
 		     (void(*)(unsigned long))rtl8180_irq_rx_tasklet,
 		     (unsigned long)priv);
-#endif
-//by lizhaoming for Radio on/off
-#ifdef POLLING_METHOD_FOR_RADIO
-	init_timer(&priv->gpio_polling_timer);
-	priv->gpio_polling_timer.data = (unsigned long)dev;
-	priv->gpio_polling_timer.function = gpio_change_polling;
 #endif
 //by amy for rate adaptive
 	init_timer(&priv->rateadapter_timer);
@@ -5800,11 +5768,6 @@ int _rtl8180_up(struct net_device *dev)
             	SwAntennaDiversityTimerCallback(dev);
         	}
 #endif
-#ifdef POLLING_METHOD_FOR_RADIO
-	if(priv->polling_timer_on == 0){//add for S3/S4
-		gpio_change_polling((unsigned long)dev);
-	}
-#endif
 
 	ieee80211_softmac_start_protocol(priv->ieee80211);
 
@@ -6720,8 +6683,6 @@ static const struct net_device_ops rtl8187_netdev_ops = {
 	.ndo_get_stats		= rtl8180_stats,
 };
 
-extern int __init r8187b_rfkill_init(struct net_device *dev);
-
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,5,0)
 static int __devinit rtl8187_usb_probe(struct usb_interface *intf,
 			 const struct usb_device_id *id)
@@ -6804,14 +6765,8 @@ static void * __devinit rtl8187_usb_probe(struct usb_device *udev,
 	
 	rtl8180_proc_init_one(dev);
 	
-//by lizhaoming for Radio power on/off
-#ifdef POLLING_METHOD_FOR_RADIO
-	if(priv->polling_timer_on == 0){//add for S3/S4
-		/* init rfkill */
-		r8187b_rfkill_init(dev);
-		gpio_change_polling((unsigned long)dev);
-	}
-#endif
+	/* init rfkill */
+	r8187b_rfkill_init(dev);
 	
 	DMESG("Driver probe completed");
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
@@ -6850,12 +6805,6 @@ static void __devexit rtl8187_usb_disconnect(struct usb_device *udev, void *ptr)
 		
 		priv=ieee80211_priv(dev);
 		
-//add for RF power on power off by lizhaoming 080512
-#ifdef POLLING_METHOD_FOR_RADIO
-		del_timer_sync(&priv->gpio_polling_timer);
-		cancel_delayed_work(&priv->ieee80211->GPIOChangeRFWorkItem);
-		priv->polling_timer_on = 0;//add for S3/S4
-#endif
 		MgntActSet_RF_State(dev, eRfOff, RF_CHANGE_BY_SW);
 
 #ifdef _RTL8187_EXT_PATCH_
@@ -6962,8 +6911,6 @@ static int __init rtl8187_usb_module_init(void)
 	return usb_register(&rtl8187_usb_driver);
 }
 
-extern void __exit r8187b_rfkill_exit(void);
-
 static void __exit rtl8187_usb_module_exit(void)
 {
 	usb_deregister(&rtl8187_usb_driver);
@@ -7049,136 +6996,46 @@ void setKey(struct net_device *dev,
             --------------------------- RF power on/power off -----------------
 *****************************************************************************/
 
-extern int r8187b_wifi_report_state(r8180_priv *priv);
+/*
+ * the interface for changing the rfkill state
+ * @dev: the device of r8187b
+ * @eRfPowerStateToSet: the state we need to change,
+ * 	eRfOn: power on
+ * 	eRfOff: power off
+ *
+ * This function should be called by the SCI interrupt handler when the
+ * KEY_WLAN event happen(or install to the notify function of the SCI
+ * interrupt) or called in the wifi_set function of the rfkill interface for
+ * user-space, and also, it can be called to initialize the wifi state, and
+ * called when suspend/resume.
+ */
 
-#ifdef POLLING_METHOD_FOR_RADIO
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20))
-void GPIOChangeRFWorkItemCallBack(struct work_struct *work)
+void r8187b_wifi_change_rfkill_state(struct net_device *dev, RT_RF_POWER_STATE eRfPowerStateToSet)
 {
-	//struct delayed_work *dwork = container_of(work, struct delayed_work, work);
-	struct ieee80211_device *ieee = container_of(work, struct ieee80211_device, GPIOChangeRFWorkItem.work);
-	struct net_device *dev = ieee->dev;
 	struct r8180_priv *priv = ieee80211_priv(dev);
-#else
-void GPIOChangeRFWorkItemCallBack(struct ieee80211_device *ieee)
-{
-	struct net_device *dev = ieee->dev;
-	struct r8180_priv *priv = ieee80211_priv(dev);
-#endif
 
-	//u16 tmp2byte;
-	u8 tmp1byte;
-	//u8 btPSR;
-	//u8 btConfig0;
-	RT_RF_POWER_STATE	eRfPowerStateToSet;
-	bool 	bActuallySet=false;
-
-#if 0	
-	if(priv->up == 0)//driver stopped
-		{
-			printk("\nDo nothing...");
-			goto out;
-		}
+	if ((priv->ieee80211->bHwRadioOff == true) && (eRfPowerStateToSet == eRfOn))
+		priv->ieee80211->bHwRadioOff = false;
+	else if ((priv->ieee80211->bHwRadioOff == false) && (eRfPowerStateToSet == eRfOff))
+		priv->ieee80211->bHwRadioOff = true;
 	else
-#endif
-		{
-			// We should turn off LED before polling FF51[4].
-			
-			//Turn off LED.
-			//btPSR = read_nic_byte(dev, PSR);
-			//write_nic_byte(dev, PSR, (btPSR & ~BIT3));	
+		return;
 
-			//It need to delay 4us suggested by Jong, 2008-01-16
-			//udelay(4);
-
-			//HW radio On/Off according to the value of FF51[4](config0)
-			//btConfig0 = btPSR = read_nic_byte(dev, CONFIG0);
-
-			//Turn on LED.
-			//write_nic_byte(dev, PSR, btPSR| BIT3);
-					
-			//eRfPowerStateToSet = (btConfig0 & BIT4) ?  eRfOn : eRfOff;
-			
-			// Get RF power state to set.
-			//if Driver isn't stopped, we poll GPIO1
-
-			//set 0x91 B1= 0	// 1: for output enable; 0: otherwise.
-			// (William says) Note that, it will cause unstable if we set output enable 1 but not to write it. Annie, 2005-12-12.
-			tmp1byte = read_nic_byte(dev,GPE);			
-			if(priv->EEPROMSelectNewGPIO == true)
-				tmp1byte &= ~BIT2;//for toshiba new GPIO use bit2
-			else
-				tmp1byte &= ~BIT1;
-
-			write_nic_byte(dev,GPE,tmp1byte);
-
-			//read  0x92 B1(read GPIO1)
-			tmp1byte = read_nic_byte(dev,GPI);
-
-			//turn on or trun off RF according to the value of GPIO1 	
-			if(priv->EEPROMSelectNewGPIO == true)
-				eRfPowerStateToSet = (tmp1byte&BIT2) ?  eRfOn : eRfOff;
-			else
-				eRfPowerStateToSet = (tmp1byte&BIT1) ?  eRfOn : eRfOff;			
-
-			if((priv->ieee80211->bHwRadioOff == true) && (eRfPowerStateToSet == eRfOn)){
-				priv->ieee80211->bHwRadioOff = false;
-				bActuallySet = true;
-			}else if((priv->ieee80211->bHwRadioOff == false) && (eRfPowerStateToSet == eRfOff)){
-				priv->ieee80211->bHwRadioOff = true;
-				bActuallySet = true;
-			}
-			
-			//if(priv->wlan_first_up_flag1 == 0){
-			//	bActuallySet = true;
-			//	priv->wlan_first_up_flag1 = 1;
-			//}			
-
-			if(bActuallySet)
-			{
-				//printk("GPIO1:%x,eRfPowerStateToSet: %x, bHwRadioOff:%x\n",
-				//	  tmp1byte,eRfPowerStateToSet,priv->ieee80211->bHwRadioOff);
-
-				//GPIO Polling Methord Made Radio On/Off
-				DMESG("GPIO Polling Methord Will Turn Radio %s", 
-				      (priv->ieee80211->bHwRadioOff == true) ? "Off" : "On");
+	DMESG("SCI interrupt Methord Will Turn Radio %s",
+		(priv->ieee80211->bHwRadioOff == true) ? "Off" : "On");
 
 #ifdef LED //by lizhaoming
-				if(priv->ieee80211->bHwRadioOff == true){
-					priv->ieee80211->ieee80211_led_contorl(dev,LED_CTL_POWER_OFF); 
-				}else{
-					if(priv->up == 1){
-						priv->ieee80211->ieee80211_led_contorl(dev,LED_CTL_POWER_ON); 
-					}
-				}
+	if (priv->ieee80211->bHwRadioOff)
+		priv->ieee80211->ieee80211_led_contorl(dev, LED_CTL_POWER_OFF);
+	else if (priv->up)
+		priv->ieee80211->ieee80211_led_contorl(dev, LED_CTL_POWER_ON);
 #endif
 
-				MgntActSet_RF_State(dev, eRfPowerStateToSet, RF_CHANGE_BY_HW);
+	MgntActSet_RF_State(dev, eRfPowerStateToSet, RF_CHANGE_BY_HW);
 
-				/* report the rfkill state to the user-space via uevent interface */
-				r8187b_wifi_report_state(priv);
-			}
-			
-		}
+	/* report the rfkill state to the user-space via uevent interface */
+	r8187b_wifi_report_state(priv);
 }
-void gpio_change_polling(unsigned long data)
-{
-	struct r8180_priv* priv = ieee80211_priv((struct net_device *)data);
-	//struct net_device* dev = (struct net_device*)data;
-
-	priv->polling_timer_on = 1;//add for S3/S4
-
-	if(priv->driver_upping == 0){
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20)
-		queue_delayed_work(priv->ieee80211->wq,&priv->ieee80211->GPIOChangeRFWorkItem,0);
-#else
-		queue_work(priv->ieee80211->wq,&priv->ieee80211->GPIOChangeRFWorkItem);
-#endif
-	}
-
-	mod_timer(&priv->gpio_polling_timer, jiffies + MSECS(IEEE80211_WATCH_DOG_TIME));
-}
-#endif
 
 /***************************************************************************
      ------------------- module init / exit stubs ----------------

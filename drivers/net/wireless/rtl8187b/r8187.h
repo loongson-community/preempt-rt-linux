@@ -520,12 +520,6 @@ typedef struct r8180_priv
         u8                                      TryupingCountNoData;
 
         u8                  CurrentOperaRate;
-// by lizhaoming used for Radio on/off
-#ifdef POLLING_METHOD_FOR_RADIO
-	struct timer_list gpio_polling_timer;
-	u8 polling_timer_on;
-	u8 wlan_first_up_flag1;
-#endif
 //by amy for rate adaptive
 //by amy for power save
 	struct timer_list watch_dog_timer;
@@ -799,9 +793,10 @@ void rtl8187_set_rxconf(struct net_device *dev);
 bool MgntActSet_RF_State(struct net_device *dev,RT_RF_POWER_STATE StateToSet,u32 ChangeSource);
 void IPSEnter(struct net_device *dev);
 void IPSLeave(struct net_device *dev);
-#ifdef POLLING_METHOD_FOR_RADIO
-void gpio_change_polling(unsigned long data);
-#endif
+int r8187b_rfkill_init(struct net_device *dev);
+void r8187b_rfkill_exit(void);
+int r8187b_wifi_report_state(r8180_priv *priv);
+void r8187b_wifi_change_rfkill_state(struct net_device *dev, RT_RF_POWER_STATE eRfPowerStateToSet);
 bool SetRFPowerState(struct net_device *dev,RT_RF_POWER_STATE eRFPowerState);
 void rtl8180_patch_ieee80211_wx_sync_scan_wq(struct ieee80211_device *ieee);
 #ifdef _RTL8187_EXT_PATCH_

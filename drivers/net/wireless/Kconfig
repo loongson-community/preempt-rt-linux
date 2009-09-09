@@ -439,6 +439,7 @@ config RTL8187B
 	depends on MAC80211 && USB && WLAN_80211 && LEMOTE_YEELOONG2F
 	select EEPROM_93CX6
 	select RFKILL
+	select EC_KB3310B
 	---help---
 	  This is a driver for RTL8187B based cards, this driver is especially
 	  for yeeloon2f laptop.

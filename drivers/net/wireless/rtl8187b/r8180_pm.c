@@ -37,11 +37,11 @@ int rtl8187_suspend (struct usb_interface *intf, pm_message_t state)
 	priv=ieee80211_priv(dev);
 
 	if(dev) {
-#ifdef POLLING_METHOD_FOR_RADIO
-		del_timer_sync(&priv->gpio_polling_timer);
-		cancel_delayed_work(&priv->ieee80211->GPIOChangeRFWorkItem);
-		priv->polling_timer_on = 0;
-#endif
+		/* save the old rfkill state and then power off it */
+		priv->eInactivePowerState = priv->eRFPowerState;
+		/* power off the wifi by default */
+		r8187b_wifi_change_rfkill_state(dev, eRfOff);
+
 		if (!netif_running(dev)) {
 			//printk(KERN_WARNING "UI or other close dev before suspend, go out suspend function\n");
 			return 0;
@@ -67,11 +67,9 @@ int rtl8187_resume (struct usb_interface *intf)
 	priv=ieee80211_priv(dev);
 
 	if(dev) {
-#ifdef POLLING_METHOD_FOR_RADIO
-		if(priv->polling_timer_on == 0){//add for S3/S4
-			gpio_change_polling((unsigned long)dev);
-		}
-#endif
+		/* resume the old rfkill state */
+		r8187b_wifi_change_rfkill_state(dev, priv->eInactivePowerState);
+
 		if (!netif_running(dev)){
 			//printk(KERN_WARNING "UI or other close dev before suspend, go out resume function\n");
 			return 0;

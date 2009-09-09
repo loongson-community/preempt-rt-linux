@@ -1351,11 +1351,6 @@ struct ieee80211_device {
 	struct delayed_work hw_dig_wq;
 	struct delayed_work tx_pw_wq;
 
-//Added for RF power on power off by lizhaoming 080512
-#ifdef POLLING_METHOD_FOR_RADIO
-	struct delayed_work GPIOChangeRFWorkItem;
-#endif
-
 #ifdef SW_ANTE_DIVERSITY
 	struct delayed_work SwAntennaWorkItem;
 #endif
@@ -1370,11 +1365,6 @@ struct ieee80211_device {
 	struct work_struct watch_dog_wq;
 	struct work_struct hw_dig_wq;
 	struct work_struct tx_pw_wq;
-
-//Added for RF power on power off by lizhaoming 080512
-#ifdef POLLING_METHOD_FOR_RADIO
-	struct work_struct GPIOChangeRFWorkItem;
-#endif
 
 #ifdef SW_ANTE_DIVERSITY
 	struct work_struct SwAntennaWorkItem;

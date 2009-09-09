@@ -159,6 +159,20 @@ static void usb_ports_update_status(int state)
 	ec_write(0xf463, value);
 }
 
+/* This function is defined in rtl8187b rfkill driver
+ *
+ * NOTE! this is not a good method to call the function directly, it's better
+ * to register the notifiers to the sci interrupt. so, this is only a temp
+ * solution, I will change it later: just install a notifer to the sci
+ * interrupt handler is enough.
+ */
+#ifdef CONFIG_RTL8187B
+extern int r8187b_wifi_update_rfkill_state(int status);
+#else
+void r8187b_wifi_update_rfkill_state(int status)
+{
+}
+#endif
 void yeeloong_input_update_status(int event, int status)
 {
 	static int old_brightness_status = -1, old_volume_status = -1;
@@ -173,6 +187,19 @@ void yeeloong_input_update_status(int event, int status)
 			case SCI_EVENT_NUM_LID:
 				yeeloong_lid_update_status(status);
 				return;
+			case SCI_EVENT_NUM_WLAN:
+				/* notify the wifi driver to update it's state
+				 * FIXME: we user set the rfkill state from
+				 * user-space, we need to sync the state to the
+				 * EC register, but this is not suitable to do
+				 * in the r8187 rfkill subdriver. to avoid this
+				 * problem, we not use the EC wifi register,
+				 * just use the event as a switch. the argument
+				 * 2 means we just swith the status. the return
+				 * value is the real status we set.
+				 */
+				status = r8187b_wifi_update_rfkill_state(2);
+				break;
 			case SCI_EVENT_NUM_DISPLAY_BRIGHTNESS:
 				/* current status is higher than the old one, means up */
 				if ((status < old_brightness_status) || (status == 0))
