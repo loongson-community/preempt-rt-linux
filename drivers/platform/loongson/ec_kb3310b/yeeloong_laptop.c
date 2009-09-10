@@ -27,6 +27,7 @@
 #include "ec_misc_fn.h"
 
 #define MAX_BRIGHTNESS 8
+#define DEFAULT_BRIGHTNESS (MAX_BRIGHTNESS - 1)
 
 static int hotkey_status = -1;
 
@@ -121,7 +122,25 @@ static void yeeloong_hotkey_update_status(int key)
 static void lcd_video_output_update_status(int state);
 static void crt_video_output_update_status(int state);
 
-static void camera_input_update_status(int state)
+static void camera_input_set(int state)
+{
+	int value;
+	static int camera_status;
+
+	if (state == 2) {
+		/* resume the old camera status (when resuming )*/
+		camera_input_set(camera_status);
+	} else {
+		state = !!state;
+		camera_status = ec_read(REG_CAMERA_STATUS);
+		if (state != camera_status) {
+			value = ec_read(REG_CAMERA_CONTROL);
+			ec_write(REG_CAMERA_CONTROL, value | (1 << 1));
+		}
+	}
+}
+
+static void camera_input_update_status()
 {
 	int value;
 
@@ -171,7 +190,7 @@ void yeeloong_input_update_status(int event, int status)
 					return;
 				break;
 			case SCI_EVENT_NUM_CAMERA:
-				camera_input_update_status(1);
+				camera_input_update_status();
 				break;
 			case SCI_EVENT_NUM_CRT_DETECT:
 				if (ec_read(REG_CRT_DETECT)) {
@@ -518,6 +537,8 @@ static int lcd_video_output_set(struct output_device *od)
 		outb(value, 0x3c5);
 		/* open backlight */
 		ec_write(REG_BACKLIGHT_CTRL, BIT_BACKLIGHT_ON);
+		/* ensure the brightness is suitable */
+		ec_write(REG_DISPLAY_BRIGHTNESS, DEFAULT_BRIGHTNESS);
 	} else {
 		/* close backlight */
 		ec_write(REG_BACKLIGHT_CTRL, BIT_BACKLIGHT_OFF);
@@ -548,12 +569,14 @@ static int crt_video_output_set(struct output_device *od)
 	int value;
 
 	if (state) {
-		/* open CRT */
-		outb(0x21, 0x3c4);
-		value = inb(0x3c5);
-		value &= ~(1 << 7);
-		outb(0x21, 0x3c4);
-		outb(value, 0x3c5);
+		if (ec_read(REG_CRT_DETECT)) {
+			/* open CRT */
+			outb(0x21, 0x3c4);
+			value = inb(0x3c5);
+			value &= ~(1 << 7);
+			outb(0x21, 0x3c4);
+			outb(value, 0x3c5);
+		}
 	} else {
 		/* close CRT */
 		outb(0x21, 0x3c4);
@@ -587,8 +610,6 @@ static void crt_video_output_update_status(int state)
 
 #ifdef CONFIG_SUSPEND
 
-static int cached_camera_status;
-
 static int yeeloong_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	printk(KERN_INFO "yeeloong specific suspend\n");
@@ -598,9 +619,7 @@ static int yeeloong_suspend(struct platform_device *pdev, pm_message_t state)
 	/* close CRT */
 	crt_video_output_update_status(0);
 	/* power off camera */
-	cached_camera_status = ec_read(REG_CAMERA_STATUS);
-	if (cached_camera_status)
-		camera_input_update_status(1);
+	camera_input_update_status(0);
 	/* poweroff three usb ports */
 	usb_ports_update_status(0);
 	/* minimize the speed of FAN */
@@ -614,14 +633,16 @@ static int yeeloong_resume(struct platform_device *pdev)
 {
 	printk(KERN_INFO "yeeloong specific resume\n");
 
+	/* resume the status of lcd & crt */
 	lcd_video_output_update_status(1);
 	crt_video_output_update_status(1);
 
 	/* power on three usb ports */
 	usb_ports_update_status(1);
 
-	if (cached_camera_status)
-		camera_input_update_status(1);
+	/* resume the camera status */
+	camera_input_update_status(2);
+
 	/* resume fan to auto mode */
 	yeeloong_set_fan_pwm_enable(0);
 
@@ -706,7 +727,7 @@ static int __init yeeloong_init(void)
 	}
 
 	yeeloong_backlight_device->props.max_brightness = MAX_BRIGHTNESS;
-	yeeloong_backlight_device->props.brightness = MAX_BRIGHTNESS/2;
+	yeeloong_backlight_device->props.brightness = DEFAULT_BRIGHTNESS;
 	backlight_update_status(yeeloong_backlight_device);
 
 	yeeloong_thermal_cdev = thermal_cooling_device_register("LCD",
