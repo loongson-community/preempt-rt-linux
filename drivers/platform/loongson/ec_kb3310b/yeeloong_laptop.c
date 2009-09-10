@@ -32,7 +32,8 @@ static int hotkey_status = -1;
 
 static int yeeloong_set_brightness(struct backlight_device *bd)
 {
-	unsigned int level;
+	unsigned int level, current_level;
+	static unsigned int old_level;
 
 	level = (bd->props.fb_blank == FB_BLANK_UNBLANK &&
 		 bd->props.power == FB_BLANK_UNBLANK) ?
@@ -43,7 +44,11 @@ static int yeeloong_set_brightness(struct backlight_device *bd)
 	else if (level < 0)
 		level = 0;
 
-	ec_write(REG_DISPLAY_BRIGHTNESS, level);
+	/* avoid tune the brightness when the EC is tuning it */
+	current_level = ec_read(REG_DISPLAY_BRIGHTNESS);
+	if ((old_level == current_level) && (old_level != level))
+		ec_write(REG_DISPLAY_BRIGHTNESS, level);
+	old_level = level;
 
 	return 0;
 }
