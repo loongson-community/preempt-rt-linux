@@ -787,14 +787,17 @@ static int __init yeeloong_init(void)
 
 	/* hotkey */
 	ret = yeeloong_input_setup(&yeeloong_pdev->dev);
-	if (ret)
+	if (ret) {
+		input_unregister_device(yeeloong_input_device);
+		yeeloong_input_device = NULL;
 		return ret;
+	}
 	ret = sysfs_create_group(&yeeloong_input_device->dev.kobj,
 				    &hotkey_attribute_group);
 	if (ret) {
 		sysfs_remove_group(&yeeloong_input_device->dev.kobj,
 			   &hotkey_attribute_group);
-		input_free_device(yeeloong_input_device);
+		input_unregister_device(yeeloong_input_device);
 		yeeloong_input_device = NULL;
 	}
 	/* update the current status of lid */
@@ -824,16 +827,17 @@ static int __init yeeloong_init(void)
 
 static void __exit yeeloong_exit(void)
 {
-	if (yeeloong_backlight_device)
+	if (yeeloong_backlight_device) {
 		backlight_device_unregister(yeeloong_backlight_device);
-	yeeloong_backlight_device = NULL;
-	if (yeeloong_thermal_cdev) {
-		sysfs_remove_link(&yeeloong_backlight_device->dev.kobj,
-				  "thermal_cooling");
-		sysfs_remove_link(&yeeloong_thermal_cdev->device.kobj,
-				  "device");
-		thermal_cooling_device_unregister(yeeloong_thermal_cdev);
-		yeeloong_thermal_cdev = NULL;
+		if (yeeloong_thermal_cdev) {
+			sysfs_remove_link(&yeeloong_backlight_device->dev.kobj,
+					  "thermal_cooling");
+			sysfs_remove_link(&yeeloong_thermal_cdev->device.kobj,
+					  "device");
+			thermal_cooling_device_unregister(yeeloong_thermal_cdev);
+			yeeloong_thermal_cdev = NULL;
+		}
+		yeeloong_backlight_device = NULL;
 	}
 	video_output_unregister(lcd_output_dev);
 	video_output_unregister(crt_output_dev);
@@ -841,20 +845,21 @@ static void __exit yeeloong_exit(void)
 	if (yeeloong_input_device) {
 		sysfs_remove_group(&yeeloong_input_device->dev.kobj,
 			   &hotkey_attribute_group);
-		input_free_device(yeeloong_input_device);
+		input_unregister_device(yeeloong_input_device);
+		yeeloong_input_device = NULL;
 	}
-	yeeloong_input_device = NULL;
 
 	if (yeeloong_sensors_device) {
 		sysfs_remove_group(&yeeloong_sensors_device->kobj,
 				&hwmon_attribute_group);
 		hwmon_device_unregister(yeeloong_sensors_device);
+		yeeloong_sensors_device = NULL;
 	}
-	yeeloong_sensors_device = NULL;
 
-	if (yeeloong_pdev)
+	if (yeeloong_pdev) {
 		platform_device_unregister(yeeloong_pdev);
-	yeeloong_pdev = NULL;
+		yeeloong_pdev = NULL;
+	}
 	platform_driver_unregister(&platform_driver);
 }
 
