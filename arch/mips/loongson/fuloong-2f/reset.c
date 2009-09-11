@@ -35,12 +35,21 @@ void mach_prepare_reboot(void)
 	 * you can type halt command and then reboot, seems the hardware reset
 	 * logic not work normally.
 	 */
+#if 1
 	{
 		u32 hi, lo;
 		_rdmsr(DIVIL_MSR_REG(DIVIL_SOFT_RESET), &hi, &lo);
 		lo |= 0x00000001;
 		_wrmsr(DIVIL_MSR_REG(DIVIL_SOFT_RESET), hi, lo);
 	}
+#else
+	{
+		u32 hi, lo;
+		_rdmsr(GLCP_MSR_REG(GLCP_SYS_RST), &hi, &lo);
+		lo |= 0x00000001;
+		_wrmsr(GLCP_MSR_REG(GLCP_SYS_RST), hi, lo);
+	}
+#endif
 }
 
 void mach_prepare_shutdown(void)
