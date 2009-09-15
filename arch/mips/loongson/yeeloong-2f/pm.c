@@ -98,6 +98,13 @@ extern int ec_query_seq(unsigned char cmd);
 extern int sci_get_event_num(void);
 extern void yeeloong_lid_update_status(int status);
 
+static struct delayed_work lid_task;
+static int initialized;
+static void yeeloong_lid_update_task(struct work_struct *work)
+{
+	yeeloong_lid_update_status(BIT_LID_DETECT_ON);
+}
+
 static int wakeup_loongson(void)
 {
 	int irq;
@@ -128,7 +135,20 @@ static int wakeup_loongson(void)
 			/* wakeup cpu when people open the LID */
 			if (lid_status == BIT_LID_DETECT_ON) {
 				/* send out this event */
-				yeeloong_lid_update_status(lid_status);
+				printk(KERN_INFO "send out lid open event in %s\n", __func__);
+
+				/* if we call it directly here, the WARNING
+				 * will happen at line 98 of
+				 * kerenl/time/timekeeping.c (getnstimeofday)
+				 * via "WARN_ON(timekeeping_suspended);" because,
+				 * currently, we are in the suspend status
+				 */
+				if (initialized == 0) {
+					/* init the rfkill work task */
+					INIT_DELAYED_WORK(&lid_task, yeeloong_lid_update_task);
+					initialized = 1;
+				}
+				schedule_delayed_work(&lid_task, 1);
 				return 1;
 			}
 		}
