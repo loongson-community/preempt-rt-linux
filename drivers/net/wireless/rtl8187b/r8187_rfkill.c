@@ -29,8 +29,11 @@ static int initialized;
 /* turn off by default */
 enum rfkill_state r8187b_rfkill_state = RFKILL_STATE_SOFT_BLOCKED;
 RT_RF_POWER_STATE eRfPowerStateToSet = eRfOff;
-DEFINE_SPINLOCK(statetoset_lock);
-DEFINE_SPINLOCK(state_lock);
+
+/* These two mutexes are used to ensure the relative rfkill status are accessed
+ * by different tasks exclusively */
+DEFINE_MUTEX(statetoset_lock);
+DEFINE_MUTEX(state_lock);
 
 void r8187b_wifi_rfkill_task(struct work_struct *work)
 {
@@ -39,9 +42,9 @@ void r8187b_wifi_rfkill_task(struct work_struct *work)
 	printk(KERN_INFO "%s : dev: %p : state: %d\n", __func__, dev, eRfPowerStateToSet);
 
 	if (dev) {
-		spin_lock(&statetoset_lock);
+		mutex_lock(&statetoset_lock);
 		r8187b_wifi_change_rfkill_state(dev, eRfPowerStateToSet);
-		spin_unlock(&statetoset_lock);
+		mutex_unlock(&statetoset_lock);
 	}
 }
 
@@ -64,21 +67,21 @@ int r8187b_wifi_update_rfkill_state(int status)
 	}
 
 
-	spin_lock(&statetoset_lock);
+	mutex_lock(&statetoset_lock);
 	if (status == 1)
 		eRfPowerStateToSet = eRfOn;
 	else if (status == 0)
 		eRfPowerStateToSet = eRfOff;
 	else if (status == 2) {
 		/* if the KEY_WLAN is pressed, just switch it! */
-		spin_lock(&state_lock);
+		mutex_lock(&state_lock);
 		if (r8187b_rfkill_state == RFKILL_STATE_UNBLOCKED)
 			eRfPowerStateToSet = eRfOff;
 		else if (r8187b_rfkill_state == RFKILL_STATE_SOFT_BLOCKED)
 			eRfPowerStateToSet = eRfOn;
-		spin_unlock(&state_lock);
+		mutex_unlock(&state_lock);
 	}
-	spin_unlock(&statetoset_lock);
+	mutex_unlock(&statetoset_lock);
 
 	schedule_work(&r8187b_rfkill_task);
 
@@ -104,20 +107,20 @@ static int r8187b_wifi_set(void *data, enum rfkill_state state)
 
 static int r8187b_wifi_get(void *data, enum rfkill_state *state)
 {
-	spin_lock(&state_lock);
+	mutex_lock(&state_lock);
 	*state = r8187b_rfkill_state;
-	spin_unlock(&state_lock);
+	mutex_unlock(&state_lock);
 
 	return 0;
 }
 
 int r8187b_wifi_report_state(r8180_priv *priv)
 {
-	spin_lock(&state_lock);
+	mutex_lock(&state_lock);
 	r8187b_rfkill_state = RFKILL_STATE_UNBLOCKED;
 	if (priv->ieee80211->bHwRadioOff && priv->eRFPowerState == eRfOff)
 		r8187b_rfkill_state = RFKILL_STATE_SOFT_BLOCKED;
-	spin_unlock(&state_lock);
+	mutex_unlock(&state_lock);
 
 	printk(KERN_INFO "%s, state: %d\n", __func__, r8187b_rfkill_state);
 
