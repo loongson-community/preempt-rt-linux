@@ -12,9 +12,9 @@ void *__kmap(struct page *page)
 {
 	void *addr;
 
-	might_sleep();
 	if (!PageHighMem(page))
 		return page_address(page);
+	might_sleep();
 	addr = kmap_high(page);
 	flush_tlb_one((unsigned long)addr);
 
