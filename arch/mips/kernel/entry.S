@@ -52,6 +52,8 @@ resume_userspace:
 #ifdef CONFIG_PREEMPT
 resume_kernel:
 	local_irq_disable
+	lw  t0, kernel_preemption
+	beqz t0,restore_all
 	lw	t0, TI_PRE_COUNT($28)
 	bnez	t0, restore_all
 need_resched:
@@ -61,7 +63,9 @@ need_resched:
 	LONG_L	t0, PT_STATUS(sp)		# Interrupts off?
 	andi	t0, 1
 	beqz	t0, restore_all
+	local_irq_disable
 	jal	preempt_schedule_irq
+	sw	zero, TI_PRE_COUNT($28)
 	b	need_resched
 #endif
 
@@ -145,7 +149,7 @@ work_pending:
 	andi	t0, a2, _TIF_NEED_RESCHED # a2 is preloaded with TI_FLAGS
 	beqz	t0, work_notifysig
 work_resched:
-	jal	schedule
+	jal	__schedule
 
 	local_irq_disable		# make sure need_resched and
 					# signals dont change between

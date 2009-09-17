@@ -64,8 +64,10 @@ void __noreturn cpu_idle(void)
 
 			smtc_idle_loop_hook();
 #endif
+			stop_critical_timings();
 			if (cpu_wait)
 				(*cpu_wait)();
+			start_critical_timings();
 		}
 #ifdef CONFIG_HOTPLUG_CPU
 		if (!cpu_online(cpu) && !cpu_isset(cpu, cpu_callin_map) &&
@@ -74,9 +76,11 @@ void __noreturn cpu_idle(void)
 			play_dead();
 #endif
 		tick_nohz_restart_sched_tick();
-		preempt_enable_no_resched();
-		schedule();
+		local_irq_disable();
+		__preempt_enable_no_resched();
+		__schedule();
 		preempt_disable();
+		local_irq_enable();
 	}
 }
 
