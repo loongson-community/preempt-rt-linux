@@ -59,7 +59,7 @@ extern struct cpufreq_frequency_table loongson2f_clockmod_table[];
 #endif
 
 #define LOONGSON_REG(x) \
-	(*(u32 *)((char *)CKSEG1ADDR(LOONGSON_REG_BASE) + (x)))
+	(*(volatile u32 *)((char *)CKSEG1ADDR(LOONGSON_REG_BASE) + (x)))
 
 #define LOONGSON_IRQ_BASE	32
 #define LOONGSON_PERFCNT_IRQ	(MIPS_CPU_IRQ_BASE + 6) /* cpu perf counter */
@@ -251,7 +251,7 @@ extern struct cpufreq_frequency_table loongson2f_clockmod_table[];
 
 extern unsigned long _loongson_addrwincfg_base;
 #define LOONGSON_ADDRWINCFG(offset) \
-	(*(u64 *)(_loongson_addrwincfg_base + (offset)))
+	(*(volatile u64 *)(_loongson_addrwincfg_base + (offset)))
 
 #define CPU_WIN0_BASE	LOONGSON_ADDRWINCFG(0x00)
 #define CPU_WIN1_BASE	LOONGSON_ADDRWINCFG(0x08)
