@@ -31,6 +31,7 @@
 #include <linux/cpumask.h>
 #include <linux/cpu.h>
 #include <linux/err.h>
+#include <linux/smp.h>
 
 #include <asm/atomic.h>
 #include <asm/cpu.h>
@@ -47,8 +48,6 @@
 static volatile cpumask_t cpu_callin_map;	/* Bitmask of started secondaries */
 int __cpu_number_map[NR_CPUS];		/* Map physical to logical */
 int __cpu_logical_map[NR_CPUS];		/* Map logical to physical */
-
-extern void cpu_idle(void);
 
 /* Number of TCs (or siblings in Intel speak) per CPU core */
 int smp_num_siblings = 1;
