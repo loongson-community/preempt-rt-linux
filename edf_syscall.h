@@ -22,10 +22,15 @@
 #define __NR_sched_setscheduler_ex	365
 #endif
 
+#define SCHED_SIG_RORUN		0x80000000
+#define SCHED_SIG_DMISS		0x40000000
+
 struct sched_param_ex {
 	int sched_priority;
-	struct timespec sched_period;
 	struct timespec sched_runtime;
+	struct timespec sched_deadline;
+	struct timespec sched_period;
+	int sched_flags;
 };
 
 

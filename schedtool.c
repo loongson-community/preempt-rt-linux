@@ -130,8 +130,10 @@ struct engine_s {
 	int policy;
 	int prio;
         int nice;
-	struct timespec deadline;
 	struct timespec budget;
+	struct timespec deadline;
+	struct timespec period;
+	int flags;
 	
 	unsigned long aff_mask;
 
@@ -171,7 +173,7 @@ int main(int ac, char **dc)
 	 mode: MODE_NOTHING, no options set
 	 */
 	int policy=-1, nice=10, prio=0, mode=MODE_NOTHING;
-	long deadline = 0, budget = 0;
+	long budget = 0, deadline = 0, period = 0, flags = 0;
 	/*
 	 default aff_mask to 0xFF..FF== all CPUs
          unsigned long has not a defined number of bits on all arches
@@ -187,7 +189,7 @@ int main(int ac, char **dc)
 		return(0);
 	}
 
-	while((c=getopt(ac, dc, "+NFRBIDE0123456M:a:p:d:b:n:ervh")) != -1) {
+	while((c=getopt(ac, dc, "+NFRBIDE0123456M:a:p:d:b:g:sSn:ervh")) != -1) {
 
 		switch(c) {
 		case '0':
@@ -255,6 +257,15 @@ int main(int ac, char **dc)
 		case 'b':
 			budget=atol(optarg);
 			break;
+		case 'g':
+			period=atol(optarg);
+			break;
+		case 's':
+			flags |= SCHED_SIG_RORUN;
+			break;
+		case 'S':
+			flags |= SCHED_SIG_DMISS;
+			break;
 		case 'r':
                         probe_sched_features();
 			break;
@@ -313,7 +324,7 @@ int main(int ac, char **dc)
 #undef CHECK_RANGE_PRIO
 	} else if (policy == SCHED_EDF && (!deadline || !budget)) {
 		/* we have nothing to do */
-		decode_error("Option E require deadline and budget");
+		decode_error("Option -E require at least deadline and budget");
                	return(-1);
 	}
 
@@ -347,8 +358,10 @@ int main(int ac, char **dc)
 		stuff.prio=prio;
 		stuff.aff_mask=aff_mask;
 		stuff.nice=nice;
-		time_to_timespec(&stuff.deadline, deadline);
 		time_to_timespec(&stuff.budget, budget);
+		time_to_timespec(&stuff.deadline, deadline);
+		time_to_timespec(&stuff.period, period);
+		stuff.flags=flags;
 
                 /* we have this much real args/PIDs to process */
 		stuff.n=ac-optind;
@@ -407,8 +420,10 @@ int engine(struct engine_s *e)
 			 */
 			struct sched_param_ex sparam;
 			sparam.sched_priority = e->prio;
-			sparam.sched_period = e->deadline;
 			sparam.sched_runtime = e->budget;
+			sparam.sched_deadline = e->deadline;
+			sparam.sched_period = e->period;
+			sparam.sched_flags = e->flags;
 			tmpret=set_process(pid,e->policy,&sparam);
 			ret += tmpret;
 
@@ -675,7 +690,7 @@ void usage(void)
 	       "    -B                    for SCHED_BATCH\n" \
 	       "    -I -p PRIO            for SCHED_ISO\n" \
 	       "    -D                    for SCHED_IDLEPRIO\n" \
-	       "    -E -d dline -b budget for SCHED_EDF\n" \
+	       "    -E -d dline -b budget -g period for SCHED_EDF\n" \
                "\n" \
                "    -M POLICY             for manual mode; raw number for POLICY\n" \
 	       "    -p STATIC_PRIORITY    usually 1-99; only for FIFO or RR\n" \
