@@ -92,6 +92,14 @@ struct sched_param {
 
 #include <asm/processor.h>
 
+struct sched_param_ex {
+	int sched_priority;
+	struct timespec sched_runtime;
+	struct timespec sched_deadline;
+	struct timespec sched_period;
+	int sched_flags;
+};
+
 struct exec_domain;
 struct futex_pi_state;
 struct robust_list_head;
