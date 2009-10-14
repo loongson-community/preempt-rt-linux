@@ -2802,8 +2802,22 @@ void sched_fork(struct task_struct *p, int clone_flags)
 	 * Make sure we do not leak PI boosting priority to the child:
 	 */
 	p->prio = current->normal_prio;
-	if (!rt_prio(p->prio))
-		p->sched_class = &fair_sched_class;
+	if (!rt_prio(p->prio)) {
+		if (deadline_task(p)) {
+			p->sched_class = &deadline_sched_class;
+
+			/*
+			 * the child will be SCHED_DEADLINE, but with zero
+			 * bandwidth.
+			 * The parent (or some other task) must call
+			 * setscheduler_ex on it, or it won't ever start.
+			 */
+			init_deadline_task(p);
+			p->dl.flags &= ~DL_NEW;
+			p->dl.flags |= DL_THROTTLED;
+		} else
+			p->sched_class = &fair_sched_class;
+	}
 
 #if defined(CONFIG_SCHEDSTATS) || defined(CONFIG_TASK_DELAY_ACCT)
 	if (likely(sched_info_on()))
@@ -3004,6 +3018,10 @@ static void finish_task_switch(struct rq *rq, struct task_struct *prev)
 	if (mm)
  		mmdrop_delayed(mm);
 	if (unlikely(prev_state == TASK_DEAD)) {
+		/* a deadline task is dying: stop the bandwidth timer */
+		if (deadline_task(prev))
+			hrtimer_cancel(&prev->dl.dl_timer);
+
 		/*
 		 * Remove function-return probe instances associated with this
 		 * task and put them back on the free list.

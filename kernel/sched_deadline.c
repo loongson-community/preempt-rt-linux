@@ -221,6 +221,26 @@ unlock:
 	return HRTIMER_NORESTART;
 }
 
+static void init_deadline_timer(struct hrtimer *timer)
+{
+	if (hrtimer_active(timer)) {
+		hrtimer_try_to_cancel(timer);
+		return;
+	}
+
+	hrtimer_init(timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	timer->function = deadline_timer;
+}
+
+static void init_deadline_task(struct task_struct *p)
+{
+	RB_CLEAR_NODE(&p->dl.rb_node);
+	init_deadline_timer(&p->dl.dl_timer);
+	p->dl.sched_runtime = p->dl.runtime = 0;
+	p->dl.sched_deadline = p->dl.deadline = 0;
+	p->dl.flags = p->dl.bw = 0;
+}
+
 static
 int deadline_runtime_exceeded(struct rq *rq, struct sched_dl_entity *dl_se)
 {
