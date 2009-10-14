@@ -178,6 +178,8 @@ extern void proc_sched_show_task(struct task_struct *p, struct seq_file *m);
 extern void proc_sched_set_task(struct task_struct *p);
 extern void
 print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq);
+extern void
+print_deadline_rq(struct seq_file *m, int cpu, struct dl_rq *dl_rq);
 #else
 static inline void
 proc_sched_show_task(struct task_struct *p, struct seq_file *m)
@@ -188,6 +190,10 @@ static inline void proc_sched_set_task(struct task_struct *p)
 }
 static inline void
 print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq)
+{
+}
+static inline void
+print_deadline_rq(struct seq_file *m, int cpu, struct dl_rq *dl_rq)
 {
 }
 #endif

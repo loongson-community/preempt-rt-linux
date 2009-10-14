@@ -408,6 +408,16 @@ static void start_hrtick_deadline(struct rq *rq, struct task_struct *p)
 }
 #endif
 
+static struct sched_dl_entity *__pick_deadline_last_entity(struct dl_rq *dl_rq)
+{
+	struct rb_node *last = rb_last(&dl_rq->rb_root);
+
+	if (!last)
+		return NULL;
+
+	return rb_entry(last, struct sched_dl_entity, rb_node);
+}
+
 static struct sched_dl_entity *pick_next_deadline_entity(struct rq *rq,
 							 struct dl_rq *dl_rq)
 {
@@ -538,3 +548,14 @@ static const struct sched_class deadline_sched_class = {
 	.switched_to		= switched_to_deadline,
 };
 
+#ifdef CONFIG_SCHED_DEBUG
+static void print_deadline_stats(struct seq_file *m, int cpu)
+{
+	struct dl_rq *dl_rq = &cpu_rq(cpu)->dl;
+
+	rcu_read_lock();
+	for_each_leaf_deadline_rq(dl_rq, cpu_rq(cpu))
+		print_deadline_rq(m, cpu, dl_rq);
+	rcu_read_unlock();
+}
+#endif /* CONFIG_SCHED_DEBUG */
