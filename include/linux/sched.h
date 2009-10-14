@@ -1997,6 +1997,13 @@ int sched_rt_handler(struct ctl_table *table, int write,
 		struct file *filp, void __user *buffer, size_t *lenp,
 		loff_t *ppos);
 
+extern unsigned int sysctl_sched_deadline_period;
+extern int sysctl_sched_deadline_runtime;
+
+int sched_deadline_handler(struct ctl_table *table, int write,
+		struct file *filp, void __user *buffer, size_t *lenp,
+		loff_t *ppos);
+
 extern unsigned int sysctl_sched_compat_yield;
 
 extern void task_setprio(struct task_struct *p, int prio);

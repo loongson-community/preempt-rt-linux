@@ -957,6 +957,34 @@ static inline u64 global_rt_runtime(void)
 }
 
 /*
+ * deadline_runtime/deadline_period is the maximum bandwidth
+ * -deadline tasks can use. It is system wide, i.e., the sum
+ * of the bandwidths of all the tasks, inside every group and
+ * running on any CPU, has to stay below this value!
+ *
+ * default: 0s (= no bandwidth for -deadline tasks)
+ */
+unsigned int sysctl_sched_deadline_period = 0;
+int sysctl_sched_deadline_runtime = 0;
+
+static inline u64 global_deadline_period(void)
+{
+	return (u64)sysctl_sched_deadline_period * NSEC_PER_USEC;
+}
+
+static inline u64 global_deadline_runtime(void)
+{
+	return (u64)sysctl_sched_deadline_runtime * NSEC_PER_USEC;
+}
+
+/*
+ * locking for the system wide deadline bandwidth management.
+ */
+static DEFINE_MUTEX(deadline_constraints_mutex);
+static DEFINE_SPINLOCK(__sysctl_sched_deadline_lock);
+static u64 __sysctl_sched_deadline_total_bw;
+
+/*
  * We really dont want to do anything complex within switch_to()
  * on PREEMPT_RT - this check enforces this.
  */
@@ -2843,6 +2871,66 @@ static unsigned long to_ratio(u64 period, u64 runtime)
 	return div64_u64(runtime << 20, period);
 }
 
+static inline
+void __deadline_clear_task_bw(struct task_struct *p, u64 tsk_bw)
+{
+	__sysctl_sched_deadline_total_bw -= tsk_bw;
+}
+
+static inline
+void __deadline_add_task_bw(struct task_struct *p, u64 tsk_bw)
+{
+	__sysctl_sched_deadline_total_bw += tsk_bw;
+}
+
+/*
+ * update the total allocated bandwidth, if a new -deadline task arrives,
+ * leaves or stays, but modifies its bandwidth.
+ */
+static int __deadline_check_task_bw(struct task_struct *p, int policy,
+				    struct sched_param_ex *param_ex)
+{
+	u64 bw, tsk_bw;
+	int ret = 0;
+
+	spin_lock(&__sysctl_sched_deadline_lock);
+
+	if (sysctl_sched_deadline_period <= 0)
+		goto unlock;
+
+	bw = to_ratio(sysctl_sched_deadline_period,
+		      sysctl_sched_deadline_runtime);
+	if (bw <= 0)
+		return 0;
+
+	if (deadline_policy(policy))
+		tsk_bw = to_ratio(timespec_to_ns(&param_ex->sched_deadline),
+				  timespec_to_ns(&param_ex->sched_runtime));
+
+	/*
+	 * Either if a task, enters, leave, or stays deadline but chanes
+	 * its parameters, we need to update accordingly the global
+	 * deadline allocated bandwidth.
+	 */
+	if (task_has_deadline_policy(p) && !deadline_policy(policy)) {
+		__deadline_clear_task_bw(p, p->dl.bw);
+		ret = 1;
+	} else if (task_has_deadline_policy(p) && deadline_policy(policy) &&
+		  bw >= __sysctl_sched_deadline_total_bw - p->dl.bw + tsk_bw) {
+		__deadline_clear_task_bw(p, p->dl.bw);
+		__deadline_add_task_bw(p, tsk_bw);
+		ret = 1;
+	} else if (deadline_policy(policy) && !task_has_deadline_policy(p) &&
+		   bw >= __sysctl_sched_deadline_total_bw + tsk_bw) {
+		__deadline_add_task_bw(p, tsk_bw);
+		ret = 1;
+	}
+unlock:
+	spin_unlock(&__sysctl_sched_deadline_lock);
+
+	return ret;
+}
+
 /*
  * wake_up_new_task - wake up a newly created task for the first time.
  *
@@ -3027,8 +3115,10 @@ static void finish_task_switch(struct rq *rq, struct task_struct *prev)
  		mmdrop_delayed(mm);
 	if (unlikely(prev_state == TASK_DEAD)) {
 		/* a deadline task is dying: stop the bandwidth timer */
-		if (deadline_task(prev))
+		if (deadline_task(prev)) {
+			__deadline_clear_task_bw(prev, prev->dl.bw);
 			hrtimer_cancel(&prev->dl.dl_timer);
+		}
 
 		/*
 		 * Remove function-return probe instances associated with this
@@ -6720,6 +6810,19 @@ recheck:
 		atomic_spin_unlock_irqrestore(&p->pi_lock, flags);
 		goto recheck;
 	}
+	/*
+	 * If changing to SCHED_DEADLINE (or changing the parameters of a
+	 * SCHED_DEADLINE task) we need to check if enough bandwidth is
+	 * available, which might be not true!
+	 */
+	if (deadline_policy(policy) || deadline_task(p)) {
+		if (!__deadline_check_task_bw(p, policy, param_ex)) {
+			__task_rq_unlock(rq);
+			atomic_spin_unlock_irqrestore(&p->pi_lock, flags);
+			return -EPERM;
+		}
+	}
+
 	update_rq_clock(rq);
 	on_rq = p->se.on_rq;
 	running = task_current(rq, p);
@@ -10932,6 +11035,25 @@ static int sched_rt_global_constraints(void)
 }
 #endif /* CONFIG_RT_GROUP_SCHED */
 
+static int sched_deadline_global_constraints(void)
+{
+	u64 bw;
+	int ret = 1;
+
+	spin_lock_irq(&__sysctl_sched_deadline_lock);
+	if (sysctl_sched_deadline_period <= 0)
+		bw = 0;
+	else
+		bw = to_ratio(global_deadline_period(),
+			      global_deadline_runtime());
+
+	if (bw < __sysctl_sched_deadline_total_bw)
+		ret = 0;
+	spin_unlock_irq(&__sysctl_sched_deadline_lock);
+
+	return ret;
+}
+
 int sched_rt_handler(struct ctl_table *table, int write,
 		struct file *filp, void __user *buffer, size_t *lenp,
 		loff_t *ppos)
@@ -10958,6 +11080,31 @@ int sched_rt_handler(struct ctl_table *table, int write,
 		}
 	}
 	mutex_unlock(&mutex);
+
+	return ret;
+}
+
+int sched_deadline_handler(struct ctl_table *table, int write,
+		struct file *filp, void __user *buffer, size_t *lenp,
+		loff_t *ppos)
+{
+	int ret;
+	int old_period, old_runtime;
+
+	mutex_lock(&deadline_constraints_mutex);
+	old_period = sysctl_sched_deadline_period;
+	old_runtime = sysctl_sched_deadline_runtime;
+
+	ret = proc_dointvec(table, write, filp, buffer, lenp, ppos);
+
+	if (!ret && write) {
+		if (!sched_deadline_global_constraints()) {
+			sysctl_sched_deadline_period = old_period;
+			sysctl_sched_deadline_runtime = old_runtime;
+			ret = -EINVAL;
+		}
+	}
+	mutex_unlock(&deadline_constraints_mutex);
 
 	return ret;
 }
