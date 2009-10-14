@@ -93,6 +93,51 @@ struct sched_param {
 
 #include <asm/processor.h>
 
+/*
+ * Extended sched_param for SCHED_DEADLINE tasks.
+ *
+ * In fact, struct sched_param can not be modified for binary compatibility
+ * issues.
+ *
+ * A SCHED_DEADLINE task have at least a scheduling deadline (sched_deadline)
+ * and a scheduling runtime (sched_runtime). Space for a scheduling
+ * period (sched_period) is reserved, but the field is not used right now.
+ *
+ * When a SCHED_DEADLINE task activates at time t, its absolute deadline is
+ * computed as:
+ *	deadline = t + sched_deadline.
+ * The SCHED_DEADLINE runqueue is ordered according to ascending tasks'
+ * deadline values, thus the task with the _earliest_ deadline is the one
+ * that will be scheduled.
+ *
+ * In order of avoiding one task to cause intefrerence on the others, each
+ * task activation is allowed to run for at its runtime, which is at most
+ * sched_runtime.
+ * After that, the task is stopped until its deadline, when it is reactivated
+ * with a new 'runtime quota' and a new deadline.
+ *
+ * Period (or minimum interarrival time) is not dealt with in the kernel, and
+ * it is up to the user to make the task suspend at the end of each instance.
+ * The sched_wait_interval() --with clock_nanosleep like semantic-- syscall
+ * can be used for this purpose. In this case, when the task resumes, the
+ * scheduler assumes a new instance is just starting, and provide the task
+ * with new runtime and deadline values.
+ *
+ * Scheduling flags, finally, let the user specify if runtime overruns (which
+ * may occur, e.g., for timing resolution issues) and/or deadline misses
+ * (e.g., because system is oversubscribed) have to be notified by means of
+ * SIGXCPU signals.
+ *
+ * @sched_priority:	not used right now
+ *
+ * @sched_deadline:	scheduling deadline of the task
+ * @sched_runtime:	scheduling runtime of the task
+ * @sched_period:	not used right now
+ *
+ * @sched_flags:	scheduling flags of the task (runtime overrun and/or
+ *			deadline miss only, for now)
+ */
+
 #define SCHED_SIG_RORUN		0x80000000
 #define SCHED_SIG_DMISS		0x40000000
 

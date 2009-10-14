@@ -484,6 +484,7 @@ config DEADLINE_GROUP_SCHED
 	  tasks (and other groups) can be added to it only up to such
 	  ``bandwidth cap'', which might be useful for avoiding or
 	  controlling oversubscription.
+	  See Documentation/scheduler/sched-deadline.txt for more.
 
 choice
 	depends on GROUP_SCHED
