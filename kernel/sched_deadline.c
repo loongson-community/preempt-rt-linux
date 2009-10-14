@@ -244,8 +244,26 @@ static void init_deadline_task(struct task_struct *p)
 static
 int deadline_runtime_exceeded(struct rq *rq, struct sched_dl_entity *dl_se)
 {
+	/*
+	 * if the user asked for that, we have to inform him about
+	 * a (scheduling) deadline miss ...
+	 */
+	if (unlikely(dl_se->flags & SCHED_SIG_DMISS &&
+	    deadline_time_before(dl_se->deadline, rq->clock)))
+		dl_se->flags |= DL_DMISS;
+
 	if (dl_se->runtime >= 0 || deadline_se_boosted(dl_se))
 		return 0;
+
+	/*
+	 * ... and the same appies to runtime overruns.
+	 *
+	 * Note that (hopefully small) runtime overruns are very likely
+	 * to occur, mainly due to accounting resolution, while missing a
+	 * scheduling deadline should happen only on oversubscribed systems.
+	 */
+	if (dl_se->flags & SCHED_SIG_RORUN)
+		dl_se->flags |= DL_RORUN;
 
 	dequeue_deadline_entity(dl_se);
 	if (!start_deadline_timer(dl_se, dl_se->deadline)) {

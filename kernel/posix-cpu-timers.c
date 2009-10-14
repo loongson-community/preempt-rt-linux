@@ -1026,8 +1026,28 @@ static void check_thread_timers(struct task_struct *tsk,
 	}
 
 	/*
-	 * Check for the special case thread timers.
+	 * Check for the special case thread timers:
+	 *  - sched_deadline runtime/deadline overrun notification
+	 *  - sched_rt rlimit overrun notification
 	 */
+	if (deadline_task(tsk) && (tsk->dl.flags & SCHED_SIG_RORUN ||
+	    tsk->dl.flags & SCHED_SIG_DMISS)) {
+		if (tsk->dl.flags & SCHED_SIG_RORUN &&
+		    tsk->dl.flags & DL_RORUN) {
+			tsk->dl.flags &= ~DL_RORUN;
+			printk(KERN_INFO "runtime overrun: %s[%d]\n",
+			       tsk->comm, task_pid_nr(tsk));
+			__group_send_sig_info(SIGXCPU, SEND_SIG_PRIV, tsk);
+		}
+		if (tsk->dl.flags & SCHED_SIG_DMISS &&
+		    tsk->dl.flags & DL_DMISS) {
+			tsk->dl.flags &= ~DL_DMISS;
+			printk(KERN_INFO "scheduling deadline miss: %s[%d]\n",
+			       tsk->comm, task_pid_nr(tsk));
+			__group_send_sig_info(SIGXCPU, SEND_SIG_PRIV, tsk);
+		}
+	}
+
 	if (sig->rlim[RLIMIT_RTTIME].rlim_cur != RLIM_INFINITY) {
 		unsigned long hard = sig->rlim[RLIMIT_RTTIME].rlim_max;
 		unsigned long *soft = &sig->rlim[RLIMIT_RTTIME].rlim_cur;
@@ -1092,6 +1112,9 @@ static void check_process_timers(struct task_struct *tsk,
 	if (list_empty(&timers[CPUCLOCK_PROF]) &&
 	    cputime_eq(sig->it_prof_expires, cputime_zero) &&
 	    sig->rlim[RLIMIT_CPU].rlim_cur == RLIM_INFINITY &&
+	    !(deadline_task(tsk) && ((tsk->dl.flags & SCHED_SIG_RORUN &&
+	    tsk->dl.flags & DL_RORUN) || (tsk->dl.flags & SCHED_SIG_DMISS &&
+	    tsk->dl.flags & DL_DMISS))) &&
 	    list_empty(&timers[CPUCLOCK_VIRT]) &&
 	    cputime_eq(sig->it_virt_expires, cputime_zero) &&
 	    list_empty(&timers[CPUCLOCK_SCHED])) {
@@ -1151,7 +1174,10 @@ static void check_process_timers(struct task_struct *tsk,
 	}
 
 	/*
-	 * Check for the special case process timers.
+	 * Check for the special case thread timers:
+	 *  - prof and virt itimers
+	 *  - sched_deadline runtime/deadline overrun notification
+	 *  - sched_rt rlimit overrun notification
 	 */
 	if (!cputime_eq(sig->it_prof_expires, cputime_zero)) {
 		if (cputime_ge(ptime, sig->it_prof_expires)) {
@@ -1183,6 +1209,23 @@ static void check_process_timers(struct task_struct *tsk,
 		    (cputime_eq(virt_expires, cputime_zero) ||
 		     cputime_lt(sig->it_virt_expires, virt_expires))) {
 			virt_expires = sig->it_virt_expires;
+		}
+	}
+	if (deadline_task(tsk) && (tsk->dl.flags & SCHED_SIG_RORUN ||
+	    tsk->dl.flags & SCHED_SIG_DMISS)) {
+		if (tsk->dl.flags & SCHED_SIG_RORUN &&
+		    tsk->dl.flags & DL_RORUN) {
+			tsk->dl.flags &= ~DL_RORUN;
+			printk(KERN_INFO "runtime overrun: %s[%d]\n",
+			       tsk->comm, task_pid_nr(tsk));
+			__group_send_sig_info(SIGXCPU, SEND_SIG_PRIV, tsk);
+		}
+		if (tsk->dl.flags & SCHED_SIG_DMISS &&
+		    tsk->dl.flags & DL_DMISS) {
+			tsk->dl.flags &= ~DL_DMISS;
+			printk(KERN_INFO "scheduling deadline miss: %s[%d]\n",
+			       tsk->comm, task_pid_nr(tsk));
+			__group_send_sig_info(SIGXCPU, SEND_SIG_PRIV, tsk);
 		}
 	}
 	if (sig->rlim[RLIMIT_CPU].rlim_cur != RLIM_INFINITY) {
@@ -1372,6 +1415,11 @@ static inline int fastpath_timer_check(struct task_struct *tsk)
 		if (task_cputime_expired(&group_sample, &sig->cputime_expires))
 			return 1;
 	}
+
+	if (deadline_task(tsk) &&
+	    ((tsk->dl.flags & SCHED_SIG_RORUN && tsk->dl.flags & DL_RORUN) ||
+	    (tsk->dl.flags & SCHED_SIG_DMISS && tsk->dl.flags & DL_DMISS)))
+		return 1;
 
 	return sig->rlim[RLIMIT_CPU].rlim_cur != RLIM_INFINITY;
 }

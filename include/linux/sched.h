@@ -93,6 +93,9 @@ struct sched_param {
 
 #include <asm/processor.h>
 
+#define SCHED_SIG_RORUN		0x80000000
+#define SCHED_SIG_DMISS		0x40000000
+
 struct sched_param_ex {
 	int sched_priority;
 	struct timespec sched_runtime;
@@ -1229,6 +1232,8 @@ struct sched_rt_entity {
 #define DL_NEW			0x00000001
 #define DL_THROTTLED		0x00000002
 #define DL_BOOSTED		0x00000004
+#define DL_RORUN		0x00000008
+#define DL_DMISS		0x00000010
 
 struct sched_dl_entity {
 	struct rb_node	rb_node;
