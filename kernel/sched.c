@@ -177,6 +177,11 @@ static inline int task_has_rt_policy(struct task_struct *p)
 	return rt_policy(p->policy);
 }
 
+static inline int task_has_deadline_policy(struct task_struct *p)
+{
+	return deadline_policy(p->policy);
+}
+
 /*
  * This is the priority-queue data structure of the RT scheduling class:
  */
@@ -536,6 +541,14 @@ struct rt_rq {
 #endif
 };
 
+struct dl_rq {
+	unsigned long dl_nr_running;
+
+	/* runqueue is an rbtree, ordered by deadline */
+	struct rb_root rb_root;
+	struct rb_node *rb_leftmost;
+};
+
 #ifdef CONFIG_SMP
 
 /*
@@ -608,6 +621,7 @@ struct rq {
 
 	struct cfs_rq cfs;
 	struct rt_rq rt;
+	struct dl_rq dl;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* list of leaf cfs_rq on this cpu: */
@@ -1842,11 +1856,12 @@ static void calc_load_account_active(struct rq *this_rq);
 #include "sched_idletask.c"
 #include "sched_fair.c"
 #include "sched_rt.c"
+#include "sched_deadline.c"
 #ifdef CONFIG_SCHED_DEBUG
 # include "sched_debug.c"
 #endif
 
-#define sched_class_highest (&rt_sched_class)
+#define sched_class_highest (&deadline_sched_class)
 #define for_each_class(class) \
    for (class = sched_class_highest; class; class = class->next)
 
@@ -1862,7 +1877,7 @@ static void dec_nr_running(struct rq *rq)
 
 static void set_load_weight(struct task_struct *p)
 {
-	if (task_has_rt_policy(p)) {
+	if (task_has_deadline_policy(p) || task_has_rt_policy(p)) {
 		p->se.load.weight = prio_to_weight[0] * 2;
 		p->se.load.inv_weight = prio_to_wmult[0] >> 1;
 		return;
@@ -6323,10 +6338,14 @@ void task_setprio(struct task_struct *p, int prio)
 	if (running)
 		p->sched_class->put_prev_task(rq, p);
 
-	if (rt_prio(prio))
-		p->sched_class = &rt_sched_class;
-	else
-		p->sched_class = &fair_sched_class;
+	if (deadline_task(p))
+		p->sched_class = &deadline_sched_class;
+	else {
+		if (rt_prio(prio))
+			p->sched_class = &rt_sched_class;
+		else
+			p->sched_class = &fair_sched_class;
+	}
 
 	p->prio = prio;
 
@@ -6362,9 +6381,9 @@ void set_user_nice(struct task_struct *p, long nice)
 	 * The RT priorities are set via sched_setscheduler(), but we still
 	 * allow the 'normal' nice value to be set - but as expected
 	 * it wont have any effect on scheduling until the task is
-	 * SCHED_FIFO/SCHED_RR:
+	 * SCHED_DEADLINE, SCHED_FIFO or SCHED_RR:
 	 */
-	if (task_has_rt_policy(p)) {
+	if (unlikely(task_has_deadline_policy(p) || task_has_rt_policy(p))) {
 		p->static_prio = NICE_TO_PRIO(nice);
 		goto out_unlock;
 	}
@@ -9655,6 +9674,11 @@ static void init_rt_rq(struct rt_rq *rt_rq, struct rq *rq)
 #endif
 }
 
+static void init_deadline_rq(struct dl_rq *dl_rq, struct rq *rq)
+{
+	dl_rq->rb_root = RB_ROOT;
+}
+
 #ifdef CONFIG_FAIR_GROUP_SCHED
 static void init_tg_cfs_entry(struct task_group *tg, struct cfs_rq *cfs_rq,
 				struct sched_entity *se, int cpu, int add,
@@ -9813,6 +9837,7 @@ void __init sched_init(void)
 		rq->calc_load_update = jiffies + LOAD_FREQ;
 		init_cfs_rq(&rq->cfs, rq);
 		init_rt_rq(&rq->rt, rq);
+		init_deadline_rq(&rq->dl, rq);
 #ifdef CONFIG_FAIR_GROUP_SCHED
 		init_task_group.shares = init_task_group_load;
 		INIT_LIST_HEAD(&rq->leaf_cfs_rq_list);

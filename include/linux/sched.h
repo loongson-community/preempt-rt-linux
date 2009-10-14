@@ -38,6 +38,7 @@
 #define SCHED_BATCH		3
 /* SCHED_ISO: reserved but not implemented yet */
 #define SCHED_IDLE		5
+#define SCHED_DEADLINE		6
 
 #ifdef __KERNEL__
 
@@ -170,6 +171,7 @@ extern unsigned long get_parent_ip(unsigned long addr);
 
 struct seq_file;
 struct cfs_rq;
+struct dl_rq;
 struct task_group;
 #ifdef CONFIG_SCHED_DEBUG
 extern void proc_sched_show_task(struct task_struct *p, struct seq_file *m);
@@ -1218,6 +1220,27 @@ struct sched_rt_entity {
 #endif
 };
 
+#define DL_NEW			0x00000001
+#define DL_THROTTLED		0x00000002
+#define DL_BOOSTED		0x00000004
+
+struct sched_dl_entity {
+	struct rb_node	rb_node;
+	/* actual scheduling parameters */
+	s64		runtime;
+	u64		deadline;
+	unsigned int	flags;
+
+	/* original parameters taken from sched_param_ex */
+	u64		sched_runtime;
+	u64		sched_deadline;
+	u64		sched_period;
+	u64		bw;
+
+	int		nr_cpus_allowed;
+	struct hrtimer	dl_timer;
+};
+
 struct task_struct {
 	volatile long state;	/* -1 unrunnable, 0 runnable, >0 stopped */
 	void *stack;
@@ -1236,6 +1259,7 @@ struct task_struct {
 	const struct sched_class *sched_class;
 	struct sched_entity se;
 	struct sched_rt_entity rt;
+	struct sched_dl_entity dl;
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 	/* list of struct preempt_notifier: */
@@ -1607,6 +1631,18 @@ static inline int rt_prio(int prio)
 static inline int rt_task(struct task_struct *p)
 {
 	return rt_prio(p->prio);
+}
+
+static inline int deadline_policy(int policy)
+{
+	if (unlikely(policy == SCHED_DEADLINE))
+		return 1;
+	return 0;
+}
+
+static inline int deadline_task(struct task_struct *p)
+{
+	return deadline_policy(p->policy);
 }
 
 static inline struct pid *task_pid(struct task_struct *task)
