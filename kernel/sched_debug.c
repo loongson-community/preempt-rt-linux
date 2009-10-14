@@ -146,7 +146,8 @@ static void print_rq(struct seq_file *m, struct rq *rq, int rq_cpu)
 }
 
 #if defined(CONFIG_CGROUP_SCHED) && \
-	(defined(CONFIG_FAIR_GROUP_SCHED) || defined(CONFIG_RT_GROUP_SCHED))
+	(defined(CONFIG_FAIR_GROUP_SCHED) || defined(CONFIG_RT_GROUP_SCHED) || \
+	 defined(CONFIG_DEADLINE_GROUP_SCHED))
 static void task_group_path(struct task_group *tg, char *buf, int buflen)
 {
 	/* may be NULL if the underlying cgroup isn't fully-created yet */

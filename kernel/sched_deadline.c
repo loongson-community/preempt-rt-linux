@@ -15,6 +15,10 @@
  * However, thanks to bandwidth isolation, overruns and deadline misses
  * remains local, and does not affect any other task in the system.
  *
+ * Groups, if configured, have bandwidth as well, and it is enforced that
+ * the sum of the bandwidths of entities (tasks and groups) belonging to
+ * a group stays below its own bandwidth.
+ *
  * Copyright (C) 2009 Dario Faggioli, Michael Trimarchi
  */
 
