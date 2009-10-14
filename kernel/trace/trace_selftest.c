@@ -557,11 +557,17 @@ trace_selftest_startup_nop(struct tracer *trace, struct trace_array *tr)
 #ifdef CONFIG_SCHED_TRACER
 static int trace_wakeup_test_thread(void *data)
 {
-	/* Make this a RT thread, doesn't need to be too high */
-	struct sched_param param = { .sched_priority = 5 };
+	/* Make this a DEADLINE thread */
+	struct sched_param param = { .sched_priority = 0 };
+	struct sched_param_ex paramx = {
+		.sched_priority = 0,
+		.sched_runtime = { .tv_sec = 0, .tv_nsec = 10000000 },
+		.sched_deadline = { .tv_sec = 0, .tv_sec = 100000000},
+		.sched_flags = 0
+	};
 	struct completion *x = data;
 
-	sched_setscheduler(current, SCHED_FIFO, &param);
+	sched_setscheduler_ex(current, SCHED_DEADLINE, &param, &paramx);
 
 	/* Make it know we have a new prio */
 	complete(x);

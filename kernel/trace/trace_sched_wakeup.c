@@ -27,6 +27,7 @@ static int			wakeup_cpu;
 static int			wakeup_current_cpu;
 static unsigned			wakeup_prio = -1;
 static int			wakeup_rt;
+static int			wakeup_deadline;
 
 static raw_spinlock_t wakeup_lock =
 	(raw_spinlock_t)__RAW_SPIN_LOCK_UNLOCKED;
@@ -214,6 +215,9 @@ probe_wakeup(struct rq *rq, struct task_struct *p, int success)
 	tracing_record_cmdline(p);
 	tracing_record_cmdline(current);
 
+	if (wakeup_deadline && !deadline_task(p))
+		return;
+
 	if ((wakeup_rt && !rt_task(p)) ||
 			p->prio >= wakeup_prio ||
 			p->prio >= current->prio)
@@ -340,13 +344,22 @@ static int __wakeup_tracer_init(struct trace_array *tr)
 
 static int wakeup_tracer_init(struct trace_array *tr)
 {
+	wakeup_deadline = 0;
 	wakeup_rt = 0;
 	return __wakeup_tracer_init(tr);
 }
 
 static int wakeup_rt_tracer_init(struct trace_array *tr)
 {
+	wakeup_deadline = 0;
 	wakeup_rt = 1;
+	return __wakeup_tracer_init(tr);
+}
+
+static int wakeup_deadline_tracer_init(struct trace_array *tr)
+{
+	wakeup_deadline = 1;
+	wakeup_rt = 0;
 	return __wakeup_tracer_init(tr);
 }
 
@@ -398,6 +411,20 @@ static struct tracer wakeup_rt_tracer __read_mostly =
 #endif
 };
 
+static struct tracer wakeup_deadline_tracer __read_mostly =
+{
+	.name		= "wakeup_deadline",
+	.init		= wakeup_deadline_tracer_init,
+	.reset		= wakeup_tracer_reset,
+	.start		= wakeup_tracer_start,
+	.stop		= wakeup_tracer_stop,
+	.wait_pipe	= poll_wait_pipe,
+	.print_max	= 1,
+#ifdef CONFIG_FTRACE_SELFTEST
+	.selftest    = trace_selftest_startup_wakeup,
+#endif
+};
+
 __init static int init_wakeup_tracer(void)
 {
 	int ret;
@@ -407,6 +434,10 @@ __init static int init_wakeup_tracer(void)
 		return ret;
 
 	ret = register_tracer(&wakeup_rt_tracer);
+	if (ret)
+		return ret;
+
+	ret = register_tracer(&wakeup_deadline_tracer);
 	if (ret)
 		return ret;
 
