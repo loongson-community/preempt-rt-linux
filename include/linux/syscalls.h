@@ -415,6 +415,9 @@ asmlinkage long sys_sched_setaffinity(pid_t pid, unsigned int len,
 asmlinkage long sys_sched_getaffinity(pid_t pid, unsigned int len,
 					unsigned long __user *user_mask_ptr);
 asmlinkage long sys_sched_yield(void);
+asmlinkage long sys_sched_wait_interval(int flags,
+					const struct timespec __user *rqtp,
+					struct timespec __user *rmtp);
 asmlinkage long sys_sched_get_priority_max(int policy);
 asmlinkage long sys_sched_get_priority_min(int policy);
 asmlinkage long sys_sched_rr_get_interval(pid_t pid,

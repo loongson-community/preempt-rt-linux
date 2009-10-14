@@ -7178,6 +7178,77 @@ SYSCALL_DEFINE0(sched_yield)
 	return 0;
 }
 
+/**
+ * sys_sched_wait_interval - sleep according to the scheduling class rules.
+ *
+ * This function makes the task sleep for an absolute or relative interval
+ * (clock_nanosleep semantic). The only difference is that, before stopping
+ * the task, it asks its scheduling class if some class specific logic needs
+ * to be triggered right after the wakeup.
+ */
+SYSCALL_DEFINE3(sched_wait_interval, int, flags,
+		const struct timespec __user *, rqtp,
+		struct timespec __user *, rmtp)
+{
+	struct timespec lrqtp;
+	struct hrtimer_sleeper t;
+	enum hrtimer_mode mode = flags & TIMER_ABSTIME ?
+				 HRTIMER_MODE_ABS : HRTIMER_MODE_REL;
+	int ret = 0;
+
+	if (copy_from_user(&lrqtp, rqtp, sizeof(lrqtp)))
+		return -EFAULT;
+
+	if (!timespec_valid(&lrqtp))
+		return -EINVAL;
+
+	hrtimer_init_on_stack(&t.timer, CLOCK_MONOTONIC, mode);
+	hrtimer_set_expires(&t.timer, timespec_to_ktime(*rqtp));
+	hrtimer_init_sleeper(&t, current);
+	do {
+		set_current_state(TASK_INTERRUPTIBLE);
+		hrtimer_start_expires(&t.timer, mode);
+		if (!hrtimer_active(&t.timer))
+			t.task = NULL;
+
+		if (likely(t.task)) {
+			if (t.task->sched_class->wait_interval)
+				t.task->sched_class->wait_interval(t.task);
+			schedule();
+		}
+
+		hrtimer_cancel(&t.timer);
+		mode = HRTIMER_MODE_ABS;
+	} while (t.task && !signal_pending(current));
+	__set_current_state(TASK_RUNNING);
+
+	if (t.task == NULL)
+		goto out;
+
+	/* Absolute timers don't need this to be restarted. */
+	if (mode == HRTIMER_MODE_ABS) {
+		ret = -ERESTARTNOHAND;
+		goto out;
+	}
+
+	if (rmtp) {
+		ktime_t rmt;
+		struct timespec rmt_ts;
+
+		rmt = hrtimer_expires_remaining(&t.timer);
+		if (rmt.tv64 > 0)
+			goto out;
+		rmt_ts = ktime_to_timespec(rmt);
+		if (!timespec_valid(&rmt_ts))
+			goto out;
+		if (copy_to_user(rmtp, &rmt, sizeof(*rmtp)))
+			ret = -EFAULT;
+	}
+out:
+	destroy_hrtimer_on_stack(&t.timer);
+	return ret;
+}
+
 static inline int should_resched(void)
 {
 	return need_resched() && !(preempt_count() & PREEMPT_ACTIVE);

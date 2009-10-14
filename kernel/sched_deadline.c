@@ -409,6 +409,14 @@ static void yield_task_deadline(struct rq *rq)
 {
 }
 
+/*
+ * Informs the scheduler that an instance ended.
+ */
+static void wait_interval_deadline(struct task_struct *p)
+{
+	p->dl.flags |= DL_NEW;
+}
+
 #ifdef CONFIG_SCHED_HRTICK
 static void start_hrtick_deadline(struct rq *rq, struct task_struct *p)
 {
@@ -545,6 +553,7 @@ static const struct sched_class deadline_sched_class = {
 	.enqueue_task		= enqueue_task_deadline,
 	.dequeue_task		= dequeue_task_deadline,
 	.yield_task		= yield_task_deadline,
+	.wait_interval		= wait_interval_deadline,
 
 	.check_preempt_curr	= check_preempt_curr_deadline,
 

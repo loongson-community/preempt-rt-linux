@@ -835,5 +835,5 @@ ia32_sys_call_table:
 	.quad sys_sched_setscheduler_ex
 	.quad sys_sched_setparam_ex
 	.quad sys_sched_getparam_ex
->>>>>>> bffe654... SCHED_DEADLINE: added sched_*_ex syscalls.:arch/x86/ia32/ia32entry.S
+	.quad sys_sched_wait_interval		/* 340 */
 ia32_syscall_end:
