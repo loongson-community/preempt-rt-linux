@@ -2835,6 +2835,14 @@ void sched_fork(struct task_struct *p, int clone_flags)
 	put_cpu();
 }
 
+static unsigned long to_ratio(u64 period, u64 runtime)
+{
+	if (runtime == RUNTIME_INF)
+		return 1ULL << 20;
+
+	return div64_u64(runtime << 20, period);
+}
+
 /*
  * wake_up_new_task - wake up a newly created task for the first time.
  *
@@ -6552,6 +6560,9 @@ __setscheduler(struct rq *rq, struct task_struct *p, int policy, int prio)
 	case SCHED_RR:
 		p->sched_class = &rt_sched_class;
 		break;
+	case SCHED_DEADLINE:
+		p->sched_class = &deadline_sched_class;
+		break;
 	}
 
 	p->rt_priority = prio;
@@ -6559,6 +6570,28 @@ __setscheduler(struct rq *rq, struct task_struct *p, int policy, int prio)
 	/* we are holding p->pi_lock already */
 	p->prio = rt_mutex_getprio(p);
 	set_load_weight(p);
+}
+
+/*
+ * initialize all the fields of the deadline scheduling entity.
+ * The absolute deadline and the actual task runtime will be set at the
+ * activation.
+ */
+static void
+__setscheduler_ex(struct rq *rq, struct task_struct *p,
+		  struct sched_param_ex *param_ex)
+{
+	struct sched_dl_entity *dl_se = &p->dl;
+
+	init_deadline_task(p);
+	dl_se->flags |= DL_NEW;
+	dl_se->flags &= ~DL_THROTTLED;
+
+	dl_se->flags = param_ex->sched_flags;
+	dl_se->sched_runtime = timespec_to_ns(&param_ex->sched_runtime);
+	dl_se->sched_deadline = timespec_to_ns(&param_ex->sched_deadline);
+	dl_se->sched_period = timespec_to_ns(&param_ex->sched_period);
+	dl_se->bw = to_ratio(dl_se->sched_deadline, dl_se->sched_runtime);
 }
 
 /*
@@ -6578,7 +6611,9 @@ static bool check_same_owner(struct task_struct *p)
 }
 
 static int __sched_setscheduler(struct task_struct *p, int policy,
-				struct sched_param *param, bool user)
+				struct sched_param *param,
+				struct sched_param_ex *param_ex,
+				bool user)
 {
 	int retval, oldprio, oldpolicy = -1, on_rq, running;
 	unsigned long flags;
@@ -6591,7 +6626,8 @@ recheck:
 	/* double check policy once rq lock held */
 	if (policy < 0)
 		policy = oldpolicy = p->policy;
-	else if (policy != SCHED_FIFO && policy != SCHED_RR &&
+	else if (policy != SCHED_DEADLINE &&
+			policy != SCHED_FIFO && policy != SCHED_RR &&
 			policy != SCHED_NORMAL && policy != SCHED_BATCH &&
 			policy != SCHED_IDLE)
 		return -EINVAL;
@@ -6605,6 +6641,17 @@ recheck:
 	    (!p->mm && param->sched_priority > MAX_RT_PRIO-1))
 		return -EINVAL;
 	if (rt_policy(policy) != (param->sched_priority != 0))
+		return -EINVAL;
+	/*
+	 * Validate the parameters for a SCHED_DEADLINE task.
+	 * We need relative deadline to be different than zero and
+	 * greater or equal than the runtime.
+	 */
+	if (deadline_policy(policy) && (!param_ex ||
+	    param_ex->sched_priority != 0 ||
+	    timespec_to_ns(&param_ex->sched_deadline) == 0 ||
+	    timespec_to_ns(&param_ex->sched_deadline) <
+	    timespec_to_ns(&param_ex->sched_runtime)))
 		return -EINVAL;
 
 	/*
@@ -6682,6 +6729,8 @@ recheck:
 		p->sched_class->put_prev_task(rq, p);
 
 	oldprio = p->prio;
+	if (deadline_policy(policy))
+		__setscheduler_ex(rq, p, param_ex);
 	__setscheduler(rq, p, policy, param->sched_priority);
 
 	if (running)
@@ -6710,9 +6759,17 @@ recheck:
 int sched_setscheduler(struct task_struct *p, int policy,
 		       struct sched_param *param)
 {
-	return __sched_setscheduler(p, policy, param, true);
+	return __sched_setscheduler(p, policy, param, NULL, true);
 }
 EXPORT_SYMBOL_GPL(sched_setscheduler);
+
+int sched_setscheduler_ex(struct task_struct *p, int policy,
+			  struct sched_param *param,
+			  struct sched_param_ex *param_ex)
+{
+	return __sched_setscheduler(p, policy, param, param_ex, true);
+}
+EXPORT_SYMBOL_GPL(sched_setscheduler_ex);
 
 /**
  * sched_setscheduler_nocheck - change the scheduling policy and/or RT priority of a thread from kernelspace.
@@ -6728,7 +6785,7 @@ EXPORT_SYMBOL_GPL(sched_setscheduler);
 int sched_setscheduler_nocheck(struct task_struct *p, int policy,
 			       struct sched_param *param)
 {
-	return __sched_setscheduler(p, policy, param, false);
+	return __sched_setscheduler(p, policy, param, NULL, false);
 }
 
 static int
@@ -6753,6 +6810,33 @@ do_sched_setscheduler(pid_t pid, int policy, struct sched_param __user *param)
 	return retval;
 }
 
+static int
+do_sched_setscheduler_ex(pid_t pid, int policy,
+			 struct sched_param_ex __user *param_ex)
+{
+	struct sched_param lparam;
+	struct sched_param_ex lparam_ex;
+	struct task_struct *p;
+	int retval;
+
+	if (!param_ex || pid < 0)
+		return -EINVAL;
+	if (copy_from_user(&lparam_ex, param_ex,
+	    sizeof(struct sched_param_ex)))
+		return -EFAULT;
+
+	rcu_read_lock();
+	retval = -ESRCH;
+	p = find_process_by_pid(pid);
+	if (p != NULL) {
+		lparam.sched_priority = lparam_ex.sched_priority;
+		retval = sched_setscheduler_ex(p, policy, &lparam, &lparam_ex);
+	}
+	rcu_read_unlock();
+
+	return retval;
+}
+
 /**
  * sys_sched_setscheduler - set/change the scheduler policy and RT priority
  * @pid: the pid in question.
@@ -6770,6 +6854,21 @@ SYSCALL_DEFINE3(sched_setscheduler, pid_t, pid, int, policy,
 }
 
 /**
+ * sys_sched_setscheduler_ex - set/change the scheduler policy to SCHED_DEADLINE
+ * @pid: the pid in question.
+ * @policy: new policy (should be SCHED_DEADLINE).
+ * @param: structure containg the extended deadline parameters.
+ */
+SYSCALL_DEFINE3(sched_setscheduler_ex, pid_t, pid, int, policy,
+		struct sched_param_ex __user *, param_ex)
+{
+	if (policy < 0)
+		return -EINVAL;
+
+	return do_sched_setscheduler_ex(pid, policy, param_ex);
+}
+
+/**
  * sys_sched_setparam - set/change the RT priority of a thread
  * @pid: the pid in question.
  * @param: structure containing the new RT priority.
@@ -6777,6 +6876,17 @@ SYSCALL_DEFINE3(sched_setscheduler, pid_t, pid, int, policy,
 SYSCALL_DEFINE2(sched_setparam, pid_t, pid, struct sched_param __user *, param)
 {
 	return do_sched_setscheduler(pid, -1, param);
+}
+
+/**
+ * sys_sched_setparam - set/change the DEADLINE parameters of a thread
+ * @pid: the pid in question.
+ * @param_ex: structure containing the new parameters (deadline, runtime, etc.).
+ */
+SYSCALL_DEFINE2(sched_setparam_ex, pid_t, pid,
+		struct sched_param_ex __user *, param_ex)
+{
+	return do_sched_setscheduler_ex(pid, -1, param_ex);
 }
 
 /**
@@ -6840,6 +6950,49 @@ SYSCALL_DEFINE2(sched_getparam, pid_t, pid, struct sched_param __user *, param)
 out_unlock:
 	read_unlock(&tasklist_lock);
 	return retval;
+}
+
+/**
+ * sys_sched_getparam - get the DEADLINE task parameters of a thread
+ * @pid: the pid in question.
+ * @param_ex: structure containing the new parameters (deadline, runtime, etc.).
+ */
+SYSCALL_DEFINE2(sched_getparam_ex, pid_t, pid,
+		struct sched_param_ex __user *, param_ex)
+{
+	struct sched_param_ex lp;
+	struct task_struct *p;
+	int retval;
+
+	if (!param_ex || pid < 0)
+		return -EINVAL;
+
+	read_lock(&tasklist_lock);
+	p = find_process_by_pid(pid);
+	retval = -ESRCH;
+	if (!p)
+		goto out_unlock;
+
+	retval = security_task_getscheduler(p);
+	if (retval)
+		goto out_unlock;
+
+	lp.sched_priority = p->rt_priority;
+	lp.sched_runtime = ns_to_timespec(p->dl.sched_runtime);
+	lp.sched_deadline = ns_to_timespec(p->dl.sched_deadline);
+	read_unlock(&tasklist_lock);
+
+	/*
+	 * This one might sleep, we cannot do it with a spinlock held ...
+	 */
+	retval = copy_to_user(param_ex, &lp, sizeof(*param_ex)) ? -EFAULT : 0;
+
+	return retval;
+
+out_unlock:
+	read_unlock(&tasklist_lock);
+	return retval;
+
 }
 
 long sched_setaffinity(pid_t pid, const struct cpumask *in_mask)
@@ -10473,14 +10626,6 @@ unsigned long sched_group_shares(struct task_group *tg)
  * Ensure that the real time constraints are schedulable.
  */
 static DEFINE_MUTEX(rt_constraints_mutex);
-
-static unsigned long to_ratio(u64 period, u64 runtime)
-{
-	if (runtime == RUNTIME_INF)
-		return 1ULL << 20;
-
-	return div64_u64(runtime << 20, period);
-}
 
 /* Must be called with tasklist_lock held */
 static inline int tg_has_rt_tasks(struct task_group *tg)
