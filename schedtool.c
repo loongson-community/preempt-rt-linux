@@ -490,7 +490,7 @@ int set_process(pid_t pid, int policy, struct sched_param_ex *p)
 	char *msg2="could not set PID %d to raw policy #%d";
 
 	/* anything other than 0 indicates error */
-	if((ret=sched_setscheduler_ex(pid, policy, p))) {
+	if((ret=sched_setscheduler_ex(pid, policy, sizeof(*p), p))) {
 
                 /* la la pointer mismatch .. lala */
 		decode_error((CHECK_RANGE_POLICY(policy) ? msg1 : msg2),

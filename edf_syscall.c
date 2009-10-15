@@ -11,8 +11,8 @@
 #include "edf_syscall.h"
 
 
-int sched_setscheduler_ex(pid_t pid, int policy,
+int sched_setscheduler_ex(pid_t pid, int policy, unsigned len,
 				struct sched_param_ex *param)
 {
-	return syscall(__NR_sched_setscheduler_ex, pid, policy, param);
+	return syscall(__NR_sched_setscheduler_ex, pid, policy, len, param);
 }

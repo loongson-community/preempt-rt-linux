@@ -34,5 +34,5 @@ struct sched_param_ex {
 };
 
 
-int sched_setscheduler_ex(pid_t pid, int policy,
+int sched_setscheduler_ex(pid_t pid, int policy, unsigned len,
 			  struct sched_param_ex *param);
