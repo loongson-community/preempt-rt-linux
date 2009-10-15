@@ -7009,7 +7009,7 @@ do_sched_setscheduler(pid_t pid, int policy, struct sched_param __user *param)
 }
 
 static int
-do_sched_setscheduler_ex(pid_t pid, int policy,
+do_sched_setscheduler_ex(pid_t pid, int policy, unsigned int len,
 			 struct sched_param_ex __user *param_ex)
 {
 	struct sched_param lparam;
@@ -7019,8 +7019,9 @@ do_sched_setscheduler_ex(pid_t pid, int policy,
 
 	if (!param_ex || pid < 0)
 		return -EINVAL;
-	if (copy_from_user(&lparam_ex, param_ex,
-	    sizeof(struct sched_param_ex)))
+	if (len > sizeof(struct sched_param_ex))
+		return -EINVAL;
+	if (copy_from_user(&lparam_ex, param_ex,len))
 		return -EFAULT;
 
 	rcu_read_lock();
@@ -7055,15 +7056,17 @@ SYSCALL_DEFINE3(sched_setscheduler, pid_t, pid, int, policy,
  * sys_sched_setscheduler_ex - set/change the scheduler policy to SCHED_DEADLINE
  * @pid: the pid in question.
  * @policy: new policy (should be SCHED_DEADLINE).
+ * @len: size of data pointed by param_ex.
  * @param: structure containg the extended deadline parameters.
  */
-SYSCALL_DEFINE3(sched_setscheduler_ex, pid_t, pid, int, policy,
+SYSCALL_DEFINE4(sched_setscheduler_ex, pid_t, pid,
+		int, policy, unsigned, len,
 		struct sched_param_ex __user *, param_ex)
 {
 	if (policy < 0)
 		return -EINVAL;
 
-	return do_sched_setscheduler_ex(pid, policy, param_ex);
+	return do_sched_setscheduler_ex(pid, policy, len, param_ex);
 }
 
 /**
@@ -7079,12 +7082,13 @@ SYSCALL_DEFINE2(sched_setparam, pid_t, pid, struct sched_param __user *, param)
 /**
  * sys_sched_setparam - set/change the DEADLINE parameters of a thread
  * @pid: the pid in question.
+ * @len: size of data pointed by param_ex.
  * @param_ex: structure containing the new parameters (deadline, runtime, etc.).
  */
-SYSCALL_DEFINE2(sched_setparam_ex, pid_t, pid,
+SYSCALL_DEFINE3(sched_setparam_ex, pid_t, pid, unsigned, len,
 		struct sched_param_ex __user *, param_ex)
 {
-	return do_sched_setscheduler_ex(pid, -1, param_ex);
+	return do_sched_setscheduler_ex(pid, -1, len, param_ex);
 }
 
 /**
@@ -7153,9 +7157,10 @@ out_unlock:
 /**
  * sys_sched_getparam - get the DEADLINE task parameters of a thread
  * @pid: the pid in question.
+ * @len: size of data pointed by param_ex.
  * @param_ex: structure containing the new parameters (deadline, runtime, etc.).
  */
-SYSCALL_DEFINE2(sched_getparam_ex, pid_t, pid,
+SYSCALL_DEFINE3(sched_getparam_ex, pid_t, pid, unsigned, len,
 		struct sched_param_ex __user *, param_ex)
 {
 	struct sched_param_ex lp;
@@ -7163,6 +7168,8 @@ SYSCALL_DEFINE2(sched_getparam_ex, pid_t, pid,
 	int retval;
 
 	if (!param_ex || pid < 0)
+		return -EINVAL;
+	if (len < sizeof(struct sched_param_ex))
 		return -EINVAL;
 
 	read_lock(&tasklist_lock);
@@ -7183,7 +7190,7 @@ SYSCALL_DEFINE2(sched_getparam_ex, pid_t, pid,
 	/*
 	 * This one might sleep, we cannot do it with a spinlock held ...
 	 */
-	retval = copy_to_user(param_ex, &lp, sizeof(*param_ex)) ? -EFAULT : 0;
+	retval = copy_to_user(param_ex, &lp, len) ? -EFAULT : 0;
 
 	return retval;
 

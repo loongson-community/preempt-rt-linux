@@ -399,16 +399,16 @@ asmlinkage long sys_clock_nanosleep(clockid_t which_clock, int flags,
 asmlinkage long sys_nice(int increment);
 asmlinkage long sys_sched_setscheduler(pid_t pid, int policy,
 					struct sched_param __user *param);
-asmlinkage long sys_sched_setscheduler_ex(pid_t pid, int policy,
+asmlinkage long sys_sched_setscheduler_ex(pid_t pid, int policy, unsigned len,
 					struct sched_param_ex __user *param);
 asmlinkage long sys_sched_setparam(pid_t pid,
 					struct sched_param __user *param);
-asmlinkage long sys_sched_setparam_ex(pid_t pid,
+asmlinkage long sys_sched_setparam_ex(pid_t pid, unsigned len,
 					struct sched_param_ex __user *param);
 asmlinkage long sys_sched_getscheduler(pid_t pid);
 asmlinkage long sys_sched_getparam(pid_t pid,
 					struct sched_param __user *param);
-asmlinkage long sys_sched_getparam_ex(pid_t pid,
+asmlinkage long sys_sched_getparam_ex(pid_t pid, unsigned len,
 					struct sched_param_ex __user *param);
 asmlinkage long sys_sched_setaffinity(pid_t pid, unsigned int len,
 					unsigned long __user *user_mask_ptr);
