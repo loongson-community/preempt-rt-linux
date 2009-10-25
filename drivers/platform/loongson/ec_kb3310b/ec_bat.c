@@ -336,7 +336,7 @@ static int __init apm_init(void)
 {
 	int ret;
 
-	printk(KERN_ERR
+	printk(KERN_INFO
 	       "APM of battery on KB3310B Embedded Controller init.\n");
 
 	battery_tsk = kthread_create(battery_manager, NULL, "battery_manager");
