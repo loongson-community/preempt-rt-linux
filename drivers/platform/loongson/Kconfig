@@ -21,6 +21,7 @@ config EC_KB3310B
 	select HWMON
 	select THERMAL
 	select VIDEO_OUTPUT_CONTROL
+	select BACKLIGHT_CLASS_DEVICE
 	default y
 	---help---
 	  This is a driver for yeeloong laptops. It adds the kb3310b support:
