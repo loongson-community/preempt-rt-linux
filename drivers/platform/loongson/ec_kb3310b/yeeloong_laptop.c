@@ -169,8 +169,9 @@ static void usb_ports_update_status(int state)
 #ifdef CONFIG_RTL8187B
 extern int r8187b_wifi_update_rfkill_state(int status);
 #else
-void r8187b_wifi_update_rfkill_state(int status)
+static int r8187b_wifi_update_rfkill_state(int status)
 {
+	return status;
 }
 #endif
 void yeeloong_input_update_status(int event, int status)
