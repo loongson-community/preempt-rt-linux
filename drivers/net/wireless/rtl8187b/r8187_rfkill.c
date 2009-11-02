@@ -162,7 +162,9 @@ int r8187b_rfkill_init(struct net_device *dev)
 
 void r8187b_rfkill_exit(void)
 {
-	if (r8187b_rfkill)
+	if (r8187b_rfkill) {
+		rfkill_unregister(r8187b_rfkill);
 		rfkill_free(r8187b_rfkill);
+	}
 	r8187b_rfkill = NULL;
 }
