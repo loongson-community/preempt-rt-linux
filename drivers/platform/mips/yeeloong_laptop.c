@@ -677,11 +677,6 @@ static int usb0_handler(int status)
 	return status;
 }
 
-/* yeeloong_wifi_handler may be implemented in the wifi driver */
-sci_handler yeeloong_wifi_handler;
-EXPORT_SYMBOL(yeeloong_wifi_handler);
-
-
 static void do_event_action(int event)
 {
 	sci_handler handler;
@@ -726,11 +721,6 @@ static void do_event_action(int event)
 		break;
 	case EVENT_AUDIO_VOLUME:
 		reg = REG_AUDIO_VOLUME;
-		break;
-	case EVENT_WLAN:
-		/* We use 2 to indicate it as a switch */
-		status = 2;
-		handler = yeeloong_wifi_handler;
 		break;
 	default:
 		break;
