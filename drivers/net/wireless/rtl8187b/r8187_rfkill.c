@@ -23,11 +23,6 @@
 #include "ieee80211/ieee80211.h"
 #include "linux/netdevice.h"
 
-#ifdef CONFIG_YEELOONG_HOTKEY
-typedef int (*sci_handler) (int status);
-extern sci_handler yeeloong_wifi_handler;
-#endif
-
 static struct rfkill *r8187b_rfkill;
 static struct work_struct r8187b_rfkill_task;
 static int initialized;
@@ -52,7 +47,6 @@ static void r8187b_wifi_rfkill_task(struct work_struct *work)
 
 static int r8187b_wifi_update_rfkill_state(int status)
 {
-
 	/* ensure r8187b_rfkill is initialized if dev is not initialized, means
 	 * wifi driver is not start, the status is eRfOff be default.
 	 */
@@ -81,12 +75,7 @@ static int r8187b_wifi_update_rfkill_state(int status)
 	}
 	mutex_unlock(&statetoset_lock);
 
-	/* ignore the first interrupt to ensure the wifi is powered off when starting */
-//	if (initialized == 2)
 	schedule_work(&r8187b_rfkill_task);
-
-	//if (initialized == 1)
-	//	initialized = 2;
 
 	return eRfPowerStateToSet;
 }
@@ -153,19 +142,7 @@ int r8187b_rfkill_init(struct net_device *dev)
 		return ret;
 	}
 
-	/* Install the event handler of EVENT_WLAN */
-#ifdef CONFIG_YEELOONG_HOTKEY
-	yeeloong_wifi_handler = r8187b_wifi_update_rfkill_state;
-#endif
-	/* poweroff wifi by default, if you want to enable it when booting the
-	 * kernel, just need to add this line in /etc/rc.local or the other
-	 * relative scripts which will be excuted on booting:
-	 *
-	 *   echo 1 > /sys/class/rfkill/rfkill0/state
-	 */
-
-	eRfPowerStateToSet = eRfOff;
-	r8187b_wifi_change_rfkill_state(r8187b_dev, eRfPowerStateToSet);
+	/* The default status is passed to the rfkill module */
 
 	return 0;
 }
