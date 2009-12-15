@@ -57,6 +57,37 @@ config LEMOTE_MACH2F
 
 	  These family machines include fuloong2f mini PC, yeeloong2f notebook,
 	  LingLoong allinone PC and so forth.
+
+config EMTEC_GDIUM
+	bool "Emtec Gdium Liberty 1000 Netbook"
+	select ARCH_SPARSEMEM_ENABLE
+	select BOOT_ELF32
+	select BOARD_SCACHE
+	select CEVT_R4K if ! MIPS_EXTERNAL_TIMER
+	select CPU_HAS_WB
+	select CSRC_R4K if ! MIPS_EXTERNAL_TIMER
+	select DMA_NONCOHERENT
+	select GENERIC_GPIO
+	select HW_HAS_PCI
+	select IRQ_CPU
+	select SYS_SUPPORTS_32BIT_KERNEL
+	select SYS_SUPPORTS_64BIT_KERNEL
+	select SYS_SUPPORTS_LITTLE_ENDIAN
+	select SYS_SUPPORTS_HIGHMEM
+	select SYS_HAS_CPU_LOONGSON2F
+	select SYS_HAS_EARLY_PRINTK
+	help
+	  Specific support for the Emtec Gdium Liberty 1000 netbook, based on
+	  the Loongson-2F CPU.
+
+config GDIUM_VERSION
+	int "Gdium Motherboard Revision"
+	depends on EMTEC_GDIUM
+	default 3
+	help
+	  Select the revision of the Emtec Gdium motherboard you have. If you are
+	  unsure of what to say, leave this as 3.
+
 endchoice
 
 config CS5536

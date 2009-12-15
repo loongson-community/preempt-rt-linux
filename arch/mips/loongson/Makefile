@@ -15,3 +15,9 @@ obj-$(CONFIG_LEMOTE_FULOONG2E)  += fuloong-2e/
 #
 
 obj-$(CONFIG_LEMOTE_MACH2F)  += lemote-2f/
+
+#
+# EMTEC Gdium Netbook
+#
+
+obj-$(CONFIG_EMTEC_GDIUM)  += gdium-2f/

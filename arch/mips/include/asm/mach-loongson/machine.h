@@ -24,4 +24,10 @@
 
 #endif
 
+#ifdef CONFIG_EMTEC_GDIUM
+
+#define LOONGSON_MACHTYPE MACH_DEXXON_GDIUM2F10
+
+#endif
+
 #endif /* __ASM_MACH_LOONGSON_MACHINE_H */
