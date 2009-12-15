@@ -13,7 +13,10 @@
 #include <linux/interrupt.h>
 #include <linux/pm.h>
 
+#ifdef CONFIG_I8259A
 #include <asm/i8259.h>
+#endif
+
 #include <asm/mipsregs.h>
 
 #include <loongson.h>
