@@ -48,6 +48,19 @@ static int loongson_pcibios_config_access(unsigned char access_type,
 	int reg = where & ~3;
 
 	if (busnum == 0) {
+		/* special for the host bridge inside loongson2f */
+		if (device == 0) {
+			/* we can not access beyond 256 bytes */
+			if (reg > 0xff)
+				return -1;
+
+			if (access_type == PCI_ACCESS_WRITE)
+				LOONGSON_REG(reg) = cpu_to_le32(*data);
+			else
+				*data = le32_to_cpu(LOONGSON_REG(reg));
+			return 0;
+		}
+
 		/* board-specific part,currently,only fuloong2f,yeeloong2f
 		 * use CS5536, fuloong2e use via686b, gdium has no
 		 * south bridge
