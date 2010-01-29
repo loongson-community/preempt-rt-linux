@@ -1,0 +1,24 @@
+
+
+	rt-tests for loongson2f
+
+		falcon <wuzhangjin@gmail.com>
+		2009-03-05
+
+1. introduction
+
+the rt-tests packages are downloaded from rt.wiki.kernel.org.
+
+rt-test-* is the tool for doing rt-tests with cyclictest automatically,
+
+rt-test-100load.sh: before testing, add enough load via executing "find /" command background
+rt-test-0load.sh: just test in ZERO load environment
+
+2. usage
+
+compile rt-tests
+confige the rt_tests_path in rt-test-* to the path to rt-tests package
+boot loongson2f-based box with RT_PREEMPT patched kernel
+start rt-test-100load.sh with full load
+	 or rt-test-0load.sh with ZERO load
+
