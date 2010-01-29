@@ -6,6 +6,9 @@
  Use at your own risk.
  Inspired by setbatch (C) 2002 Ingo Molnar
 
+ 01/2009:
+ added SCHED_EDF support for mips
+
  01/2006:
  included support for SCHED_IDLEPRIO for ck kernels
 
@@ -34,6 +37,8 @@
  usage
 
  */
+
+#include "fix.h"
 
 #include <stdio.h>
 #include <stdlib.h>

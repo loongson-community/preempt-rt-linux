@@ -22,6 +22,25 @@
 #define __NR_sched_setscheduler_ex	365
 #endif
 
+#ifdef __mips__
+/* XXX use the proper syscall number */
+#if _MIPS_SIM == _MIPS_SIM_ABI32
+#define __NR_Linux			4000
+#define __NR_sched_setscheduler_ex	(__NR_Linux + 335)
+#endif
+
+#if _MIPS_SIM == _MIPS_SIM_ABI64
+#define __NR_Linux			5000
+#define __NR_sched_setscheduler_ex	(__NR_Linux + 294)
+#endif
+
+#if _MIPS_SIM == _MIPS_SIM_NABI32
+#define __NR_Linux			6000
+#define __NR_sched_setscheduler_ex	(__NR_Linux + 298)
+#endif
+
+#endif /* __mips__ */
+
 #define SCHED_SIG_RORUN		0x80000000
 #define SCHED_SIG_DMISS		0x40000000
 
