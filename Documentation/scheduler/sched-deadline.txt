@@ -1,0 +1,174 @@
+			Deadline Task and Group Scheduling
+			----------------------------------
+
+CONTENTS
+========
+
+0. WARNING
+1. Overview
+  1.1 Task scheduling
+  1.2 Group scheduling
+2. The interface
+  2.1 System-wide settings
+  2.2 Default behavior
+  2.3 Basis for grouping tasks
+3. Future plans
+
+
+0. WARNING
+==========
+
+ Fiddling with these settings can result in an unpredictable or even unstable
+ system behavior. As for -rt (group) scheduling, it is assumed that root
+ knows what he is doing.
+
+
+1. Overview
+===========
+
+The SCHED_DEADLINE scheduling class implements the Earliest Deadline First
+(EDF) algorithm and uses the Constant Bandwidth Server (CBS) to provide
+bandwidth isolation among tasks.
+The implementation is aligned with the current mainstream kernel, and it
+relies on standard Linux mechanisms (e.g., control groups) to natively support
+multicore platforms and to provide hierarchical scheduling through a standard
+API.
+
+
+1.1 Task scheduling
+-------------------
+
+The SCHED_DEADLINE scheduling class does not make any restrictive assumption
+on the characteristics of the tasks, thus it can handle:
+ * periodic tasks, typical in real-time and control applications;
+ * sporadic tasks, typical in soft real-time and multimedia applications;
+ * aperiodic tasks.
+
+This is mainly because temporal isolation is ensured: the temporal behavior
+of each task (i.e., its ability to meet deadlines) is not affected by what
+happens in any other task in the system.
+In other words, even if a task misbehaves, it is not able to exploit larger
+execution time than the amount that has been devoted to it.
+
+In fact, each task is assigned a ``scheduling budget'' (sched_runtime) and a
+``scheduling deadline'' (sched_deadline, also called period in this branch
+of the real-time literature).
+This means the task is guaranteed to execute for an amount of time equal to
+sched_runtime every sched_deadline, i.e., to utilize at most a CPU bandwidth
+equal to sched_runtime/sched_deadline.
+If it tries to execute more than its sched_runtime it is slowed down, by
+stopping it until the time instant of its next deadline.
+
+However, although this algorithm (i.e., the CBS) is effective for encapsulating
+aperiodic or sporadic --real-time or non real-time-- tasks in a real-time
+EDF scheduled system, it imposes some overhead to ``standard'' periodic tasks.
+Therefore, we make it possible for periodic task to specify that they are going
+to sleep, waiting for the next activation, because a periodic instance just
+ended. This avoid them (provided they behave well!) being disturbed by
+the CBS bandwidth management logic.
+
+
+Group scheduling
+----------------
+
+The scheduling class is integrated with the control groups mechanism in order
+to allow the creation of groups of tasks with a cap on their total utilization.
+
+However, groups plays no role in the on-line scheduling decisions. This is
+different on how group scheduling works for the -rt scheduling class, and
+the difference comes from the fact that -deadline tasks _already_ have their
+own bandwidth, which is not true for standard POSIX SCHED_FIFO or SCHED_RR
+processes and threads.
+
+Therefore, there is no need for fully hierarchical runqueue implementation,
+hierarchical runtime accounting, etc., which result in simpler code and
+smaller overhead.
+All we do are bandwidth ``consistency checks'', which are performed at the
+occurrence of the following events:
+ * a -deadline task is created or moved inside a group,
+ * the parameters of a -deadline task (if inside a group) are modified,
+ * the -deadline related parameters of a group are modified.
+
+The purpose of this is ensuring the cumulative utilization of tasks and
+groups is below the one of the group containing them (see below).
+
+
+2. The Interface
+================
+
+
+2.1 System wide settings
+------------------------
+
+The system wide settings are configured under the /proc virtual file system:
+
+/proc/sys/kernel/sched_deadline_period_us:
+  The scheduling period that is equivalent to 100% CPU bandwidth
+
+/proc/sys/kernel/sched_deadline_runtime_us:
+  A global limit on how much time real-time scheduling may use. Even without
+  CONFIG_DEADLINE_GROUP_SCHED enabled, this will limit time reserved to
+  -deadline processes. With CONFIG_DEADLINE_GROUP_SCHED it signifies the
+  total bandwidth available to all real-time groups.
+
+  * Time is specified in us because the interface is s32. This gives an
+    operating range from 1us to about 35 minutes;
+  * sched_deadline_period_us takes values from 1 to INT_MAX;
+  * sched_deadline_runtime_us takes values from 1 to INT_MAX;
+  * setting runtime = period specifies 100% bandwidth exploitable by
+    -deadline tasks;
+  * setting runtime > period allows for more than 100% bandwidth
+    exploitable by -deadline tasks, which still might make sense,
+    especially in SMP systems.
+
+
+2.2 Default behavior
+---------------------
+
+The default values for sched_deadline_period_us and
+sched_deadline_runtime_us are 0.  This means no -deadline tasks or
+groups can be created!
+
+Consistently, bandwidth assigned to the root group, and to each newly created
+group, is 0 as well.
+
+
+2.3 Basis for grouping tasks
+----------------------------
+
+There are two compile-time settings for allocating CPU bandwidth. These are
+configured using the "Basis for grouping tasks" multiple choice menu under
+General setup > Group CPU Scheduler:
+
+CONFIG_USER_SCHED (aka "Basis for grouping tasks" =  "user id")
+
+This, for now, is not supported for deadline group scheduling.
+
+CONFIG_CGROUP_SCHED (aka "Basis for grouping tasks" = "Control groups")
+
+This uses the /cgroup virtual file system, i.e.:
+ * /cgroup/<cgroup>/cpu.deadline_runtime_us and
+ * /cgroup/<cgroup>/cpu.deadline_period_us,
+to control the CPU time reserved or each control group.
+
+For more information on working with control groups, you should read
+Documentation/cgroups/cgroups.txt as well.
+
+Group settings are checked against the following limits:
+
+ * for the root group {r}
+     runtime_{r} / period_{r} <= global_runtime / global_period
+ * for each group {i}, subgroup of group {j}
+     \Sum_{i} runtime_{i} / period_{i} <= runtime_{j} / period_{j}
+
+
+3. Future plans
+===============
+
+Only two, but very important pieces are missing:
+
+ * SMP/multicore global scheduling throughout push and pull logic (as in
+   -rt). This is not finished, but is on it's way, and will come very soon!
+ * Deadline/BandWidth Inheritance and/or Proxy Execution mechanisms for the
+  rt_mutexes. This probably need some more discussion, and also some more time
+  to have it implemented!

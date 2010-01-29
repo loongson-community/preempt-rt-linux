@@ -1485,7 +1485,7 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int sync)
 
 	update_curr(cfs_rq);
 
-	if (unlikely(rt_prio(p->prio))) {
+	if (unlikely(deadline_task(p) || rt_prio(p->prio))) {
 		resched_task(curr);
 		return;
 	}

@@ -418,4 +418,8 @@ EXPORT(sysn32_call_table)
 	PTR	compat_sys_rt_tgsigqueueinfo	/* 5295 */
 	PTR	sys_perf_counter_open
 	PTR	sys_accept4
+	PTR	sys_sched_setscheduler_ex
+	PTR	sys_sched_setparam_ex
+	PTR	sys_sched_getparam_ex		/* 5300 */
+	PTR	sys_sched_wait_interval
 	.size	sysn32_call_table,.-sysn32_call_table

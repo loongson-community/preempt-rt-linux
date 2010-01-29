@@ -1048,7 +1048,7 @@ static void check_preempt_equal_prio(struct rq *rq, struct task_struct *p)
  */
 static void check_preempt_curr_rt(struct rq *rq, struct task_struct *p, int sync)
 {
-	if (p->prio < rq->curr->prio) {
+	if (deadline_task(p) || p->prio < rq->curr->prio) {
 		resched_task(rq->curr);
 		return;
 	}

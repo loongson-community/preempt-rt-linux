@@ -146,7 +146,8 @@ static void print_rq(struct seq_file *m, struct rq *rq, int rq_cpu)
 }
 
 #if defined(CONFIG_CGROUP_SCHED) && \
-	(defined(CONFIG_FAIR_GROUP_SCHED) || defined(CONFIG_RT_GROUP_SCHED))
+	(defined(CONFIG_FAIR_GROUP_SCHED) || defined(CONFIG_RT_GROUP_SCHED) || \
+	 defined(CONFIG_DEADLINE_GROUP_SCHED))
 static void task_group_path(struct task_group *tg, char *buf, int buflen)
 {
 	/* may be NULL if the underlying cgroup isn't fully-created yet */
@@ -246,6 +247,38 @@ void print_rt_rq(struct seq_file *m, int cpu, struct rt_rq *rt_rq)
 #undef P
 }
 
+void print_deadline_rq(struct seq_file *m, int cpu, struct dl_rq *dl_rq)
+{
+	s64 min_deadline = -1, max_deadline = -1;
+	struct rq *rq = &per_cpu(runqueues, cpu);
+	struct sched_dl_entity *last;
+	unsigned long flags;
+
+	SEQ_printf(m, "\ndl_rq[%d]:\n", cpu);
+
+	atomic_spin_lock_irqsave(&rq->lock, flags);
+	if (dl_rq->rb_leftmost)
+		min_deadline = (rb_entry(dl_rq->rb_leftmost,
+					 struct sched_dl_entity,
+					 rb_node))->deadline;
+	last = __pick_deadline_last_entity(dl_rq);
+	if (last)
+		max_deadline = last->deadline;
+	atomic_spin_unlock_irqrestore(&rq->lock, flags);
+
+#define P(x) \
+	SEQ_printf(m, "  .%-30s: %Ld\n", #x, (long long)(x))
+#define PN(x) \
+	SEQ_printf(m, "  .%-30s: %Ld.%06ld\n", #x, SPLIT_NS(x))
+
+	P(dl_rq->dl_nr_running);
+	PN(min_deadline);
+	PN(max_deadline);
+
+#undef PN
+#undef P
+}
+
 static void print_cpu(struct seq_file *m, int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
@@ -314,6 +347,7 @@ static void print_cpu(struct seq_file *m, int cpu)
 #endif
 	print_cfs_stats(m, cpu);
 	print_rt_stats(m, cpu);
+	print_deadline_stats(m, cpu);
 
 	print_rq(m, rq, cpu);
 }
