@@ -36,7 +36,10 @@
 
 /* Ugly, but .... */
 #define gettid() syscall(__NR_gettid)
-#define sigev_notify_thread_id _sigev_un._tid
+
+/* the following usage not work everywell...may be relative to libc version? */
+/* #define sigev_notify_thread_id _sigev_un._tid */
+#define sigev_notify_thread_id_p sigev_notify_attributes
 
 #ifdef __UCLIBC__
 #define MAKE_PROCESS_CPUCLOCK(pid, clock) \
@@ -497,7 +500,7 @@ void *timerthread(void *param)
 	if (par->mode == MODE_CYCLIC) {
 		sigev.sigev_notify = SIGEV_THREAD_ID | SIGEV_SIGNAL;
 		sigev.sigev_signo = par->signal;
-		sigev.sigev_notify_thread_id = stat->tid;
+		sigev.sigev_notify_thread_id_p = (void *)&stat->tid;
 		timer_create(par->clock, &sigev, &timer);
 		tspec.it_interval = interval;
 	}
