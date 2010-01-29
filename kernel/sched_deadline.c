@@ -392,8 +392,8 @@ static void check_deadline_preempt_curr(struct task_struct *p, struct rq *rq)
 		resched_task(rq->curr);
 }
 
-static void
-enqueue_task_deadline(struct rq *rq, struct task_struct *p, int wakeup)
+static void enqueue_task_deadline(struct rq *rq, struct task_struct *p, int
+		wakeup, bool head)
 {
 	struct sched_dl_entity *dl_se = &p->dl;
 
