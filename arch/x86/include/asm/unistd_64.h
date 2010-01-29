@@ -661,6 +661,14 @@ __SYSCALL(__NR_pwritev, sys_pwritev)
 __SYSCALL(__NR_rt_tgsigqueueinfo, sys_rt_tgsigqueueinfo)
 #define __NR_perf_counter_open			298
 __SYSCALL(__NR_perf_counter_open, sys_perf_counter_open)
+#define __NR_sched_setscheduler_ex		299
+__SYSCALL(__NR_sched_setscheduler_ex, sys_sched_setscheduler_ex)
+#define __NR_sched_setparam_ex			300
+__SYSCALL(__NR_sched_setparam_ex, sys_sched_setparam_ex)
+#define __NR_sched_getparam_ex			301
+__SYSCALL(__NR_sched_getparam_ex, sys_sched_getparam_ex)
+#define __NR_sched_wait_interval		302
+__SYSCALL(__NR_sched_wait_interval, sys_sched_wait_interval)
 
 #ifndef __NO_STUBS
 #define __ARCH_WANT_OLD_READDIR
