@@ -492,4 +492,8 @@ sys_call_table:
 	PTR	sys_rt_tgsigqueueinfo
 	PTR	sys_perf_counter_open
 	PTR	sys_accept4
+	PTR	sys_sched_setscheduler_ex
+	PTR	sys_sched_setparam_ex		/* 5395 */
+	PTR	sys_sched_getparam_ex
+	PTR	sys_sched_wait_interval
 	.size	sys_call_table,.-sys_call_table
