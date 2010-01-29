@@ -28,16 +28,30 @@
 
 int mach_i8259_irq(void)
 {
-	int irq, isr, imr;
+	int irq, isr;
 
 	irq = -1;
 
 	if ((LOONGSON_INTISR & LOONGSON_INTEN) & LOONGSON_INT_BIT_INT0) {
-		imr = inb(0x21) | (inb(0xa1) << 8);
-		isr = inb(0x20) | (inb(0xa0) << 8);
-		isr &= ~0x4;	/* irq2 for cascade */
-		isr &= ~imr;
+		atomic_spin_lock(&i8259A_lock);
+		isr = inb(PIC_MASTER_CMD) &
+			~inb(PIC_MASTER_IMR) & ~(1 << PIC_CASCADE_IR);
+		if (!isr)
+			isr = (inb(PIC_SLAVE_CMD) & ~inb(PIC_SLAVE_IMR)) << 8;
 		irq = ffs(isr) - 1;
+		if (unlikely(irq == 7)) {
+			/*
+			 * This may be a spurious interrupt.
+			 *
+			 * Read the interrupt status register (ISR). If the most
+			 * significant bit is not set then there is no valid
+			 * interrupt.
+			 */
+			outb(0x0B, PIC_MASTER_ISR);	/* ISR register */
+			if (~inb(PIC_MASTER_ISR) & 0x80)
+				irq = -1;
+		}
+		atomic_spin_unlock(&i8259A_lock);
 	}
 
 	return irq;
@@ -64,10 +78,10 @@ void mach_irq_dispatch(unsigned int pending)
 #ifdef CONFIG_OPROFILE
 		do_IRQ(LOONGSON2_PERFCNT_IRQ);
 #endif
-	} else if (pending & CAUSEF_IP3)	/* CPU UART */
-		do_IRQ(LOONGSON_UART_IRQ);
-	else if (pending & CAUSEF_IP2)	/* South Bridge */
+	} else if (pending & CAUSEF_IP2)	/* South Bridge */
 		i8259_irqdispatch();
+	else if (pending & CAUSEF_IP3)		/* CPU UART */
+		do_IRQ(LOONGSON_UART_IRQ);
 	else
 		spurious_interrupt();
 }
