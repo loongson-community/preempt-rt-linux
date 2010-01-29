@@ -200,6 +200,7 @@ static enum hrtimer_restart deadline_timer(struct hrtimer *timer)
 	struct rq *rq = rq_of_deadline_rq(dl_rq);
 
 	atomic_spin_lock(&rq->lock);
+	update_rq_clock(rq);
 
 	/*
 	 * the task might have changed scheduling policy
@@ -217,11 +218,22 @@ static enum hrtimer_restart deadline_timer(struct hrtimer *timer)
 	if (p->se.on_rq) {
 		replenish_deadline_entity(dl_se);
 		enqueue_deadline_entity(dl_se);
-		check_deadline_preempt_curr(p, rq);
+		/*
+		 * there are a few cases where is important to check if a
+		 * SCHED_DEADLINE task p should preempt the current task of a
+		 * runqueue (e.g., inside the replenishment timer code).
+		 */
+		if (!deadline_task(rq->curr) ||
+			deadline_time_before(p->dl.deadline,
+					rq->curr->dl.deadline)) {
+			atomic_spin_unlock(&rq->lock);
+			resched_task(rq->curr);
+			goto away;
+		}
 	}
 unlock:
 	atomic_spin_unlock(&rq->lock);
-
+away:
 	return HRTIMER_NORESTART;
 }
 
