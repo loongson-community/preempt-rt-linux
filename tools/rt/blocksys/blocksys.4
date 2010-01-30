@@ -1,0 +1,19 @@
+.TH "blocksys" "4" "0.1" "" "Driver"
+.SH "NAME"
+.LP
+blocksys \- block CPU for a given amount of NOP cycles
+.SH "DESCRIPTION"
+.LP
+The \fBblocksys\fR driver reads a numerical string that is written to the \fB/dev/blocksys\fR device and blocks the current CPU for the number of given NOP cycles. This driver is only intended for testing purposes.
+.SH "EXAMPLES"
+.LP
+To trigger a CPU block, write the number of blocking NOP cycles to \fB/dev/blocksys\fR
+.LP
+echo 2000000 >/dev/blocksys
+.LP
+.SH "AUTHORS"
+.LP
+Carsten Emde <C.Emde@osadl.org>
+.SH "SEE ALSO"
+.LP
+mklatency(8) cyclictest(8)

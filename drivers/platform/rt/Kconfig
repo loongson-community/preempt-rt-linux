@@ -19,4 +19,15 @@ config BACKFIRE
 	  latest version from the download page:
 	  http://www.osadl.org/Driver-to-Program-Signal-Tester.driver-to-program-signal-tester.0.html
 
+config BLOCKSYS
+	tristate "Latency Generator Driver"
+	help
+	  This is a driver for creating a system latency artificially via
+	  blocking the system.  which is contributed by Carsten Emde from
+	  OSADL.
+
+	  Please get more information from tools/rt/blocksys/ and get the
+	  latest version from the download page:
+	  http://www.osadl.org/Latency-generator.latency-generator.0.html
+
 endif
