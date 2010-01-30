@@ -7,3 +7,7 @@ endif
 if MACH_LOONGSON
 source "drivers/platform/loongson/Kconfig"
 endif
+
+if PREEMPT_RT
+source "drivers/platform/rt/Kconfig"
+endif
