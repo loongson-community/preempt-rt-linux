@@ -199,7 +199,8 @@ static enum hrtimer_restart deadline_timer(struct hrtimer *timer)
 	struct dl_rq *dl_rq = deadline_rq_of_se(dl_se);
 	struct rq *rq = rq_of_deadline_rq(dl_rq);
 
-	atomic_spin_lock(&rq->lock);
+	atomic_spin_lock_bh(&rq->lock);
+	update_rq_clock(rq);
 
 	/*
 	 * the task might have changed scheduling policy
@@ -220,7 +221,7 @@ static enum hrtimer_restart deadline_timer(struct hrtimer *timer)
 		check_deadline_preempt_curr(p, rq);
 	}
 unlock:
-	atomic_spin_unlock(&rq->lock);
+	atomic_spin_unlock_bh(&rq->lock);
 
 	return HRTIMER_NORESTART;
 }
