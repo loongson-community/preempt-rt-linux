@@ -16,7 +16,7 @@
 #include <linux/init.h>
 
 /* loongson internal northbridge initialization */
-extern void bonito_irq_init(void);
+extern inline void bonito_irq_init(void);
 
 /* loongson-based machines specific reboot setup */
 extern void mips_reboot_setup(void);
@@ -39,8 +39,8 @@ extern void bonito_irqdispatch(void);
 extern void __init bonito_irq_init(void);
 extern void __init set_irq_trigger_mode(void);
 extern void __init mach_init_irq(void);
-extern void mach_irq_dispatch(unsigned int pending);
-extern int mach_i8259_irq(void);
+extern inline void mach_irq_dispatch(unsigned int pending);
+extern inline int mach_i8259_irq(void);
 
 /* irqaction structure */
 extern struct irqaction cascade_irqaction;

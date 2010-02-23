@@ -26,6 +26,9 @@
 #define LOONGSON_INT_BIT_INT0		(1 << 11)
 #define LOONGSON_INT_BIT_INT1		(1 << 12)
 
+#ifdef CONFIG_PREEMPT_RT
+inline
+#endif
 int mach_i8259_irq(void)
 {
 	int irq, isr;
@@ -58,7 +61,7 @@ int mach_i8259_irq(void)
 }
 EXPORT_SYMBOL(mach_i8259_irq);
 
-static void i8259_irqdispatch(void)
+static inline void i8259_irqdispatch(void)
 {
 	int irq;
 
@@ -69,7 +72,7 @@ static void i8259_irqdispatch(void)
 		spurious_interrupt();
 }
 
-void mach_irq_dispatch(unsigned int pending)
+inline void mach_irq_dispatch(unsigned int pending)
 {
 	if (pending & CAUSEF_IP7)
 		do_IRQ(LOONGSON_TIMER_IRQ);

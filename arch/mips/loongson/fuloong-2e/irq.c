@@ -14,7 +14,7 @@
 
 #include <loongson.h>
 
-static void i8259_irqdispatch(void)
+static inline void i8259_irqdispatch(void)
 {
 	int irq;
 
@@ -25,7 +25,7 @@ static void i8259_irqdispatch(void)
 		spurious_interrupt();
 }
 
-asmlinkage void mach_irq_dispatch(unsigned int pending)
+inline void mach_irq_dispatch(unsigned int pending)
 {
 	if (pending & CAUSEF_IP7)
 		do_IRQ(MIPS_CPU_IRQ_BASE + 7);
