@@ -19,6 +19,9 @@
 extern void _mcount(void);
 #define mcount _mcount
 
+/* ip in module space: 0xc0000000, kernel space: 0x80000000 */
+#define in_module(ip) (unlikely((ip) & 0x40000000))
+
 #define safe_load(load, src, dst, error)		\
 do {							\
 	asm volatile (					\
