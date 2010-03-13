@@ -15,57 +15,15 @@
 #include <asm/cacheflush.h>
 #include <asm/asm.h>
 #include <asm/asm-offsets.h>
-#include "../mm/uasm.h"
 
 #ifdef CONFIG_DYNAMIC_FTRACE
 
-/* Fixed instructions before linking */
-/* insn: nop */
-#ifdef CONFIG_CPU_LOONGSON2F
-/* insn: or at, at, zero */
-#define INSN_NOP 0x00200825
-#else
-#define INSN_NOP 0x00000000
-#endif
-
-/* insn: b 1f; offset = (16 >> 2) */
-#define INSN_B_1F 0x10000004
-
-/* Fixed instruction after linking */
-static unsigned int insn_jal_ftrace_caller __read_mostly;
-static unsigned int insn_lui_v1_hi16_mcount __read_mostly;
-static unsigned int insn_j_ftrace_graph_caller __read_mostly;
-
-/* Dynamic instruction when running */
-/* insn: jal func */
+#define JAL 0x0c000000		/* jump & link: ip --> ra, jump to target */
 #define ADDR_MASK 0x03ffffff	/*  op_code|addr : 31...26|25 ....0 */
-#define jal(addr) \
-	((unsigned int)(0x0c000000 | (((addr) >> 2) & ADDR_MASK)))
+#define jump_insn_encode(op_code, addr) \
+	((unsigned int)((op_code) | (((addr) >> 2) & ADDR_MASK)))
 
-inline static void ftrace_dyn_arch_init_insns(void)
-{
-	u32 *buf;
-	unsigned v1;
-
-	/* lui v1, hi16_mcount */
-	v1 = 3;
-	buf = (u32 *)&insn_lui_v1_hi16_mcount;
-	UASM_i_LA_mostly(&buf, v1, MCOUNT_ADDR);
-
-	/* jal (ftrace_caller + 8), jump over the first two instruction */
-	buf = (u32 *)&insn_jal_ftrace_caller;
-	uasm_i_jal(&buf, (FTRACE_ADDR + 8));
-
-	/* j ftrace_graph_caller */
-	buf = (u32 *)&insn_j_ftrace_graph_caller;
-	uasm_i_j(&buf, (unsigned long)ftrace_graph_caller);
-
-#ifdef DEBUG
-	pr_info("insn_jal_ftrace_caller: 0x%x\n", insn_jal_ftrace_caller);
-	pr_info("insn_lui_v1_hi16_mcount: 0x%x\n", insn_lui_v1_hi16_mcount);
-	pr_info("insn_j_ftrace_graph_caller: 0x%x\n", insn_j_ftrace_graph_caller);
-#endif
-}
+static unsigned int ftrace_nop = 0x00000000;
 
 static int ftrace_modify_code(unsigned long ip, unsigned int new_code)
 {
@@ -82,88 +40,117 @@ static int ftrace_modify_code(unsigned long ip, unsigned int new_code)
 	return 0;
 }
 
+static int lui_v1;
+static int jal_mcount;
+
 int ftrace_make_nop(struct module *mod,
 		    struct dyn_ftrace *rec, unsigned long addr)
 {
 	unsigned int new;
+	int faulted;
+	unsigned long ip = rec->ip;
 
 	/* We have compiled module with -mlong-calls, but compiled the kernel
-	 * without it, need to cope with them respectively.
-	 *
-	 * For module:
-	 *
-	 *	lui	v1, hi_16bit_of_mcount		--> b	1f
-	 *	addiu	v1, v1, low_16bit_of_mcount
-	 *	move	at, ra
-	 *	jalr	v1
-	 *	nop
-	 *						1f: (ip + 16)
-	 * For kernel:
-	 *
-	 *	move	at, ra
-	 *	jal	mcount				--> nop
-	 *
-	 */
-	new = mod ? INSN_B_1F : INSN_NOP;
+	 * without it, we need to cope with them respectively. */
+	if (ip & 0x40000000) {
+		/* record it for ftrace_make_call */
+		if (lui_v1 == 0) {
+			/* lui_v1 = *(unsigned int *)ip; */
+			safe_load_code(lui_v1, ip, faulted);
 
-	return ftrace_modify_code(rec->ip, new);
+			if (unlikely(faulted))
+				return -EFAULT;
+		}
+
+		/* lui v1, hi_16bit_of_mcount        --> b 1f (0x10000004)
+		 * addiu v1, v1, low_16bit_of_mcount
+		 * move at, ra
+		 * jalr v1
+		 * nop
+		 * 				     1f: (ip + 12)
+		 */
+		new = 0x10000004;
+	} else {
+		/* record/calculate it for ftrace_make_call */
+		if (jal_mcount == 0) {
+			/* We can record it directly like this:
+			 *     jal_mcount = *(unsigned int *)ip;
+			 * Herein, jump over the first two nop instructions */
+			jal_mcount = jump_insn_encode(JAL, (MCOUNT_ADDR + 8));
+		}
+
+		/* move at, ra
+		 * jalr v1		--> nop
+		 */
+		new = ftrace_nop;
+	}
+	return ftrace_modify_code(ip, new);
 }
+
+static int modified;	/* initialized as 0 by default */
 
 int ftrace_make_call(struct dyn_ftrace *rec, unsigned long addr)
 {
 	unsigned int new;
+	unsigned long ip = rec->ip;
 
-	new = in_module(rec->ip) ? insn_lui_v1_hi16_mcount :
-		insn_jal_ftrace_caller;
+	/* We just need to remove the "b ftrace_stub" at the fist time! */
+	if (modified == 0) {
+		modified = 1;
+		ftrace_modify_code(addr, ftrace_nop);
+	}
+	/* ip, module: 0xc0000000, kernel: 0x80000000 */
+	new = (ip & 0x40000000) ? lui_v1 : jal_mcount;
 
-	return ftrace_modify_code(rec->ip, new);
+	return ftrace_modify_code(ip, new);
 }
+
+#define FTRACE_CALL_IP ((unsigned long)(&ftrace_call))
 
 int ftrace_update_ftrace_func(ftrace_func_t func)
 {
 	unsigned int new;
 
-	new = jal((unsigned long)func);
+	new = jump_insn_encode(JAL, (unsigned long)func);
 
-	return ftrace_modify_code((unsigned long)(&ftrace_call), new);
+	return ftrace_modify_code(FTRACE_CALL_IP, new);
 }
 
 int __init ftrace_dyn_arch_init(void *data)
 {
-	ftrace_dyn_arch_init_insns();
-
-	/* remove the "b ftrace_stub" */
-	ftrace_modify_code(MCOUNT_ADDR, INSN_NOP);
-
 	/* The return code is retured via data */
 	*(unsigned long *)data = 0;
 
 	return 0;
 }
-#endif	/* CONFIG_DYNAMIC_FTRACE */
+#endif				/* CONFIG_DYNAMIC_FTRACE */
 
 #ifdef CONFIG_FUNCTION_GRAPH_TRACER
 
 #ifdef CONFIG_DYNAMIC_FTRACE
 
 extern void ftrace_graph_call(void);
+#define JMP	0x08000000	/* jump to target directly */
+#define CALL_FTRACE_GRAPH_CALLER \
+	jump_insn_encode(JMP, (unsigned long)(&ftrace_graph_caller))
 #define FTRACE_GRAPH_CALL_IP	((unsigned long)(&ftrace_graph_call))
 
 int ftrace_enable_ftrace_graph_caller(void)
 {
-	return ftrace_modify_code(FTRACE_GRAPH_CALL_IP, insn_j_ftrace_graph_caller);
+	return ftrace_modify_code(FTRACE_GRAPH_CALL_IP,
+				  CALL_FTRACE_GRAPH_CALLER);
 }
 
 int ftrace_disable_ftrace_graph_caller(void)
 {
-	return ftrace_modify_code(FTRACE_GRAPH_CALL_IP, INSN_NOP);
+	return ftrace_modify_code(FTRACE_GRAPH_CALL_IP, ftrace_nop);
 }
 
-#endif	/* !CONFIG_DYNAMIC_FTRACE */
+#endif				/* !CONFIG_DYNAMIC_FTRACE */
 
 #ifndef KBUILD_MCOUNT_RA_ADDRESS
-#define S_RA_SP	0xafbf0000	/* s{d,w} ra, offset(sp) */
-#define S_R_SP		0xafb00000	/* s{d,w} R, offset(sp) */
+#define S_RA_SP	(0xafbf << 16)	/* s{d,w} ra, offset(sp) */
+#define S_R_SP	(0xafb0 << 16)  /* s{d,w} R, offset(sp) */
 #define OFFSET_MASK	0xffff	/* stack offset range: 0 ~ PT_SIZE */
 
 unsigned long ftrace_get_parent_addr(unsigned long self_addr,
@@ -175,10 +162,14 @@ unsigned long ftrace_get_parent_addr(unsigned long self_addr,
 	unsigned int code;
 	int faulted;
 
-	/* For module, move the ip from calling site of mcount to the
-	 * instruction "lui v1, hi_16bit_of_mcount"(offset is 20), but for
-	 * kernel, move to the instruction "move ra, at"(offset is 12) */
-	ip = self_addr - (in_module(self_addr) ? 20 : 12);
+	/* in module or kernel? */
+	if (self_addr & 0x40000000) {
+		/* module: move to the instruction "lui v1, HI_16BIT_OF_MCOUNT" */
+		ip = self_addr - 20;
+	} else {
+		/* kernel: move to the instruction "move ra, at" */
+		ip = self_addr - 12;
+	}
 
 	/* search the text until finding the non-store instruction or "s{d,w}
 	 * ra, offset(sp)" instruction */
@@ -220,11 +211,11 @@ unsigned long ftrace_get_parent_addr(unsigned long self_addr,
 void prepare_ftrace_return(unsigned long *parent, unsigned long self_addr,
 			   unsigned long fp)
 {
-	int faulted;
 	unsigned long old;
 	struct ftrace_graph_ent trace;
 	unsigned long return_hooker = (unsigned long)
 	    &return_to_handler;
+	int faulted;
 
 	if (unlikely(atomic_read(&current->tracing_graph_pause)))
 		return;
@@ -281,4 +272,4 @@ out:
 	ftrace_graph_stop();
 	WARN_ON(1);
 }
-#endif	/* CONFIG_FUNCTION_GRAPH_TRACER */
+#endif				/* CONFIG_FUNCTION_GRAPH_TRACER */
