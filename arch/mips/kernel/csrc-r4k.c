@@ -35,22 +35,52 @@ static struct clocksource clocksource_mips = {
  * Please refer to include/linux/cnt32_to_63.h, arch/arm/plat-orion/time.c and
  * arch/mips/include/asm/time.h (mips_sched_clock)
  */
-unsigned long long notrace sched_clock(void)
+
+#define MASK ((1ULL << 32) - 1)
+
+#define CNT32_TO_63
+
+#ifndef CNT32_TO_63
+DEFINE_RAW_SPINLOCK(clock_lock);
+
+static inline unsigned long long notrace read_c0_clock(void)
+{
+	static u64 clock;
+	static u32 old_clock;
+	u32 current_clock;
+
+	raw_spin_lock(&clock_lock);
+	current_clock = read_c0_count();
+	clock += ((current_clock - old_clock) & MASK);
+	old_clock = current_clock;
+	raw_spin_unlock(&clock_lock);
+
+	return clock;
+}
+#else
+static inline unsigned long long notrace read_c0_clock(void)
 {
 	u64 cnt = cnt32_to_63(read_c0_count());
 
 	if (cnt & 0x8000000000000000)
 		cnt &= 0x7fffffffffffffff;
+	return cnt;
+}
+#endif
+
+unsigned long long notrace sched_clock(void)
+{
+	u64 cnt = read_c0_clock();
 
 	return mips_sched_clock(&clocksource_mips, cnt);
 }
 
 static struct timer_list cnt32_to_63_keepwarm_timer;
 
-static void cnt32_to_63_keepwarm(unsigned long data)
+static void notrace cnt32_to_63_keepwarm(unsigned long data)
 {
 	mod_timer(&cnt32_to_63_keepwarm_timer, round_jiffies(jiffies + data));
-	sched_clock();
+	read_c0_clock();
 }
 #endif
 
@@ -59,7 +89,11 @@ static inline void setup_hres_sched_clock(unsigned long clock)
 #ifdef CONFIG_CPU_SUPPORTS_HR_SCHED_CLOCK
 	unsigned long data;
 
-	data = 0x80000000UL / clock * HZ;
+#ifndef CNT32_TO_63
+	data = 0xFFFFFFFFUL / clock * HZ * 2;
+#else
+	data = 0xFFFFFFFFUL / clock * HZ;
+#endif
 	setup_timer(&cnt32_to_63_keepwarm_timer, cnt32_to_63_keepwarm, data);
 	mod_timer(&cnt32_to_63_keepwarm_timer, round_jiffies(jiffies + data));
 #endif
