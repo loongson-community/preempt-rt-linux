@@ -19,4 +19,9 @@ config BACKFIRE
 	  latest version from the download page:
 	  http://www.osadl.org/Driver-to-Program-Signal-Tester.driver-to-program-signal-tester.0.html
 
+config SCHED_CLOCK_LAT
+	tristate "sched_clock() Latency Driver"
+	help
+	  This is a driver for testing the duration need to call sched_clock()
+
 endif
