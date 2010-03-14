@@ -1,0 +1,22 @@
+
+menuconfig RT_DEVICES
+	bool "PREEMPT_RT Specific Device Drivers"
+	default y
+	help
+	  Say Y here to get to see options for devices drivers for PREEMPT RT.
+
+	  If you say N, all options in this submenu will be skipped and disabled.
+
+if RT_DEVICES
+
+config BACKFIRE
+	tristate "Signal Sender Driver"
+	help
+	  This is a driver for testing your kernel's signal sending
+	  performance, which is contributed by Carsten Emde from OSADL.
+
+	  Please get more information from tools/rt/backfire/ and get the
+	  latest version from the download page:
+	  http://www.osadl.org/Driver-to-Program-Signal-Tester.driver-to-program-signal-tester.0.html
+
+endif
