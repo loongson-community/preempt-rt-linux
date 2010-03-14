@@ -24,4 +24,8 @@ config SCHED_CLOCK_LAT
 	help
 	  This is a driver for testing the duration need to call sched_clock()
 
+config INTR_LAT
+	tristate "Interrupt Latency Driver"
+	help
+	  This is a driver for testing your kernel's interrupt latency.
 endif
