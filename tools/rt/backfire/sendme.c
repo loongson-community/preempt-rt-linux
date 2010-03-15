@@ -257,11 +257,13 @@ int main(int argc, char *argv[])
 	} else {
 		char sigtest[8];
 		char timestamp[32];
-		struct timeval before, sendtime, diff;
+		struct timeval before, sendtime, switchtime, readtime, diff;
 		unsigned int diffno = 0;
 		unsigned int mindiff1 = UINT_MAX, maxdiff1 = 0;
 		unsigned int mindiff2 = UINT_MAX, maxdiff2 = 0;
-		double sumdiff1 = 0.0, sumdiff2 = 0.0;
+		unsigned int mindiff3 = UINT_MAX, maxdiff3 = 0;
+		unsigned int mindiff4 = UINT_MAX, maxdiff4 = 0;
+		double sumdiff1 = 0.0, sumdiff2 = 0.0, sumdiff3 = 0.0, sumdiff4 = 0.0;
 
 		if (tracelimit)
 			kernvar(O_WRONLY, "tracing_enabled", "1", 1);
@@ -281,7 +283,9 @@ int main(int argc, char *argv[])
 			write(path, sigtest, strlen(sigtest));
 			while (after.tv_sec == 0)
 				;
+			gettimeofday(&switchtime, NULL);
 			read(path, timestamp, sizeof(timestamp));
+			gettimeofday(&readtime, NULL);
 			if (sscanf(timestamp, "%lu,%lu\n", &sendtime.tv_sec,
 				   &sendtime.tv_usec) != 2)
 				break;
@@ -296,7 +300,7 @@ int main(int argc, char *argv[])
 			if (diff.tv_usec > maxdiff1)
 				maxdiff1 = diff.tv_usec;
 			sumdiff1 += (double)diff.tv_usec;
-			printf("To:   Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+			printf("Signal To:      Min %4d, Cur %4d, Avg %4d, Max %4d\n",
 			       mindiff1, (int)diff.tv_usec,
 			       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
 
@@ -306,9 +310,30 @@ int main(int argc, char *argv[])
 			if (diff.tv_usec > maxdiff2)
 				maxdiff2 = diff.tv_usec;
 			sumdiff2 += (double)diff.tv_usec;
-			printf("From: Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+			printf("Signal From:    Min %4d, Cur %4d, Avg %4d, Max %4d\n",
 			       mindiff2, (int)diff.tv_usec,
 			       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
+
+			timersub(&switchtime, &after, &diff);
+			if (diff.tv_usec < mindiff3)
+				mindiff3 = diff.tv_usec;
+			if (diff.tv_usec > maxdiff3)
+				maxdiff3 = diff.tv_usec;
+			sumdiff3 += (double)diff.tv_usec;
+			printf("Context Switch: Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+			       mindiff3, (int)diff.tv_usec,
+			       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
+
+			timersub(&readtime, &switchtime, &diff);
+			if (diff.tv_usec < mindiff4)
+				mindiff4 = diff.tv_usec;
+			if (diff.tv_usec > maxdiff4)
+				maxdiff4 = diff.tv_usec;
+			sumdiff4 += (double)diff.tv_usec;
+			printf("File Read:      Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+			       mindiff4, (int)diff.tv_usec,
+			       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
+
 			after.tv_sec = 0;
 			if ((tracelimit && diff.tv_usec > tracelimit) ||
 			    shutdown) {
@@ -318,7 +343,7 @@ int main(int argc, char *argv[])
 				break;
 			}
 			nanosleep(&ts, NULL);
-			printf("\033[3A");
+			printf("\033[5A");
 			printf("\033[?25l");
 		}
 	}
