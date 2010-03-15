@@ -312,12 +312,14 @@ int main(int argc, char *argv[])
 			after.tv_sec = 0;
 			if ((tracelimit && diff.tv_usec > tracelimit) ||
 			    shutdown) {
+				printf("\033[?25h");
 				if (tracelimit)
 					stop_tracing();
 				break;
 			}
 			nanosleep(&ts, NULL);
 			printf("\033[3A");
+			printf("\033[?25l");
 		}
 	}
 
