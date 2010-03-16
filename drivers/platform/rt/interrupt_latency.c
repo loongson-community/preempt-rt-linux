@@ -31,6 +31,11 @@
  *       ^                                 ^
  *       |                                 |
  *   interrupt                         interrupt handler
+ *
+ * Change Log:
+ *
+ *   o 03/16 2010, using do_gettimeofday() instead of sched_clock() to
+ *   communicate with the user-space application.
  */
 
 #include <linux/kernel.h>
@@ -81,8 +86,8 @@ static char *msg_Ptr;
 #if defined(CONFIG_CS5536) && !defined(CONFIG_CS5536_MFGPT)
 
 #undef HZ
-#define HZ 500
-#define PERIOD 2000000	/* NSEC_PER_SEC / HZ */
+#define HZ 10000
+#define PERIOD 100	/* us, USEC_PER_SEC / HZ */
 #include <cs5536/cs5536_mfgpt.h>
 
 static u32 mfgpt_base;
@@ -149,60 +154,96 @@ static inline void arch_irq_disable(void)
 }
 #endif
 
-static u64 th, ti, sum, diff;
-static u32 total, max, min = UINT_MAX;
+static struct timeval ti, th, tc, diff;
+static u64 sum;
+static u32 total, max = 0, min = UINT_MAX;
+static void reset_variables(void)
+{
+	total = 0;
+	max = 0;
+	sum = 0;
+	min = UINT_MAX;
+	ti.tv_sec = 0;
+	ti.tv_usec = 0;
+	th.tv_sec = 0;
+	th.tv_usec = 0;
+}
 
 static void irq_enable(void)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
+	local_irq_disable();
 	arch_irq_enable();
-	ti = sched_clock() + PERIOD;
-	min = UINT_MAX;
-	max = 0;
-	sum = 0;
-	total = 0;
-	local_irq_restore(flags);
+	do_gettimeofday(&tc);
+	reset_variables();
+	local_irq_enable();
 }
 
 static void irq_disable(void)
 {
 	arch_irq_disable();
-	min = UINT_MAX;
-	max = 0;
-	sum = 0;
-	total = 0;
+	reset_variables();
+	tc.tv_sec = 0;
+	tc.tv_usec = 0;
 }
 
 static int enable_diff_output;
+static int enable_sched_latency;
 static int enable_tracing = 1;
+
+static void set_normalized_timeval(struct timeval *tv, time_t sec, s64 usec)
+{
+	while (usec >= USEC_PER_SEC) {
+		/*
+		 * The following asm() prevents the compiler from
+		 * optimising this loop into a modulo operation. See
+		 * also __iter_div_u64_rem() in include/linux/time.h
+		 */
+		asm("" : "+rm"(usec));
+		usec -= USEC_PER_SEC;
+		++sec;
+	}
+	while (usec < 0) {
+		asm("" : "+rm"(usec));
+		usec += USEC_PER_SEC;
+		--sec;
+	}
+	tv->tv_sec = sec;
+	tv->tv_usec = usec;
+}
+
+static inline struct timeval timeval_sub(struct timeval lhs,
+						struct timeval rhs)
+{
+	struct timeval tv_delta;
+	set_normalized_timeval(&tv_delta, lhs.tv_sec - rhs.tv_sec,
+				lhs.tv_usec - rhs.tv_usec);
+	return tv_delta;
+}
+
 
 static irqreturn_t irq_handler(int irq, void *dev_id)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
-	th = sched_clock();
+	local_irq_disable();
+	do_gettimeofday(&th);
 	arch_irq_disable();
-	local_irq_restore(flags);
 
-	if (th > ti)
-		diff = th - ti;
-	else
-		return IRQ_NONE;
-	do_div(diff, 1000);
-	if (diff > max)
-		max = diff;
-	else if (diff < min)
-		min = diff;
-	sum += diff;
+	ti = tc;
+	/* ti is the time the interrupt take place */
+	ti.tv_usec += PERIOD;
+
+	diff = timeval_sub(th, ti);
+	if (diff.tv_usec > max)
+		max = diff.tv_usec;
+	else if (diff.tv_usec < min)
+		min = diff.tv_usec;
+	sum += diff.tv_usec;
+
 	total++;
 
-	local_irq_save(flags);
 	arch_irq_enable();
-	ti = sched_clock() + PERIOD;
-	local_irq_restore(flags);
+	do_gettimeofday(&tc);
+	local_irq_enable();
+	preempt_check_resched();
 
 	return IRQ_HANDLED;
 }
@@ -221,18 +262,16 @@ static struct irqaction irq_action = {
 static int init_irq(void)
 {
 	int ret;
-	unsigned long flags;
 
 	ret = init_arch_irq();
 	if (ret)
 		return -EFAULT;
 
-	local_irq_save(flags);
+	local_irq_disable();
 	arch_irq_enable();
-	ti = sched_clock() + PERIOD;
-	local_irq_restore(flags);
-
-	printk(KERN_INFO"ti: %lld\n", ti);
+	do_gettimeofday(&tc);
+	reset_variables();
+	local_irq_enable();
 
 	ret = setup_irq(IRQ_NUM, &irq_action);
 	if (ret)
@@ -242,8 +281,8 @@ static int init_irq(void)
 
 static void exit_irq(void)
 {
-	remove_irq(IRQ_NUM, &irq_action);
 	exit_arch_irq();
+	remove_irq(IRQ_NUM, &irq_action);
 }
 
 static const struct file_operations fops = {
@@ -274,6 +313,24 @@ static __init int interrupt_latency_init(void)
 	printk(KERN_INFO "Try various minor numbers. Try to cat and echo to\n");
 	printk(KERN_INFO "the device file.\n");
 	printk(KERN_INFO "Remove the device file and module when done.\n");
+	printk(KERN_INFO "==============================================\nUsage:\n"
+		"o Disable it(it is enabled by default)\n"
+		"$ echo 0 > /dev/interrupt_latency\n"
+		"o Enable it\n"
+		"$ echo 1 > /dev/interrupt_latency\n"
+		"o Enable verbose diff output \n"
+		"$ echo 2 > /dev/interrupt_latency\n"
+		"o Disable verbose diff output \n"
+		"$ echo 3 > /dev/interrupt_latency\n"
+		"o Enable primary output \n"
+		"$ echo 4 > /dev/interrupt_latency\n"
+		"o Disable primary output \n"
+		"$ echo 5 > /dev/interrupt_latency\n"
+		"o Change the priority \n"
+		"$ echo 0 > /dev/interrupt_latency\n"
+		"$ ps -ef | grep interrupt // get the pid.\n"
+		"$ chrt -p 98 <pid>\n"
+		"$ echo 1 > /dev/interrupt_latency\n");
 
 	ret = init_irq();
 	if (ret) {
@@ -307,16 +364,15 @@ static __exit void interrupt_latency_exit(void)
  */
 static int device_open(struct inode *inode, struct file *file)
 {
-	u64 avg;
+	u32 avg;
 
 	if (Device_Open)
 		return -EBUSY;
 
 	Device_Open++;
 
-	avg = sum;
-	do_div(avg, total);
-	sprintf(msg, "%d %d %d\n", (u32)avg, max, min);
+	avg = sum / total;
+	sprintf(msg, "Cur: %-8d Avg: %-8d Min: %-8d Max: %-8d\n", (int)diff.tv_usec, avg, min, max);
 
 	msg_Ptr = msg;
 	try_module_get(THIS_MODULE);
@@ -355,10 +411,21 @@ static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
 	int bytes_read = 0;
 
 	if (!enable_tracing)
-		return 0;
+		goto out;
 
 	if (enable_diff_output) {
-		return snprintf(buffer, length, "%d\n", (int)diff);
+		bytes_read = snprintf(buffer, length, "%d\n", (int)diff.tv_usec);
+		goto out;
+	}
+
+	if (enable_sched_latency) {
+		preempt_disable();
+		bytes_read = snprintf(buffer, length, "%d %d,%d %d,%d %d,%d\n",
+				total, (int)ti.tv_sec, (int)ti.tv_usec,
+				(int)th.tv_sec, (int)th.tv_usec, (int)tc.tv_sec,
+				(int)tc.tv_usec);
+		preempt_enable();
+		goto out;
 	}
 
 	/*
@@ -388,6 +455,7 @@ static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
 	/*
 	 * Most read functions return the number of bytes put into the buffer
 	 */
+out:
 	return bytes_read;
 }
 
@@ -414,6 +482,13 @@ device_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 			break;
 		case 3:
 			enable_diff_output = 0;
+			break;
+		case 4:
+			enable_sched_latency = 1;
+			break;
+		case 5:
+			enable_sched_latency = 0;
+			break;
 		default:
 			break;
 		}
