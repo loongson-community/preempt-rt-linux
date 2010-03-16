@@ -1,0 +1,40 @@
+.TH "mklatency" "8" "0.1" "" ""
+.SH "NAME"
+.LP
+\fBmklatency\fR \- Artificially create latency through a blocking driver
+.SH "SYNTAX"
+.LP
+mklatency
+.br
+.SH "DESCRIPTION"
+.LP
+The program \fBmklatency\fR uses the \fBblocksys\fR driver to artificially create a system latency for testing purposes. It may, for example, be used to make sure that the \fBcyclictest\fR tool is, in fact, able to determine a system latency should one occur (see example).
+.SH "OPTIONS"
+(none)
+.SH "FILES"
+blocksys.ko
+.SH "EXAMPLES"
+The following commands to be entered from two separate root shells:
+
+Shell #1:
+.nf
+cyclictest \-a \-t \-n \-p99
+.fi
+
+Shell #2:
+.nf
+modprobe blocksys
+mklatency
+tail /var/log/messages
+[..] kernel: blocksys: CPU #0 will be blocked for 2000000 nops
+[..] kernel: blocksys: CPU #0 blocked about 1270 us
+.fi
+
+Shell #1:
+The \fBcyclictest\fR should have detected the generated latency.
+.SH "AUTHORS"
+.LP
+Carsten Emde <C.Emde@osadl.org>
+.SH "SEE ALSO"
+.LP
+cyclictest(8)
