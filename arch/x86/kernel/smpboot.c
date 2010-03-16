@@ -327,6 +327,7 @@ notrace static void __cpuinit start_secondary(void *unused)
 	x86_cpuinit.setup_percpu_clockev();
 
 	wmb();
+	preempt_enable();
 	cpu_idle();
 }
 
