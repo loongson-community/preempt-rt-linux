@@ -71,6 +71,9 @@ static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
 /* Max length of the message from the device */
 #define BUF_LEN 1024
 
+static wait_queue_head_t wq;
+static int irq_on;
+
 /*
  * Global variables are declared as static, so are global within the file.
  */
@@ -157,6 +160,7 @@ static inline void arch_irq_disable(void)
 static struct timeval ti, th, tc, diff;
 static u64 sum;
 static u32 total, max = 0, min = UINT_MAX;
+
 static void reset_variables(void)
 {
 	total = 0;
@@ -167,6 +171,7 @@ static void reset_variables(void)
 	ti.tv_usec = 0;
 	th.tv_sec = 0;
 	th.tv_usec = 0;
+	irq_on = 0;
 }
 
 static void irq_enable(void)
@@ -220,7 +225,6 @@ static inline struct timeval timeval_sub(struct timeval lhs,
 	return tv_delta;
 }
 
-
 static irqreturn_t irq_handler(int irq, void *dev_id)
 {
 	local_irq_disable();
@@ -243,7 +247,8 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 	arch_irq_enable();
 	do_gettimeofday(&tc);
 	local_irq_enable();
-	preempt_check_resched();
+	irq_on = 1;
+	wake_up_interruptible(&wq);
 
 	return IRQ_HANDLED;
 }
@@ -306,6 +311,8 @@ static __init int interrupt_latency_init(void)
 		       Major);
 		return Major;
 	}
+
+	init_waitqueue_head(&wq);
 
 	printk(KERN_INFO "I was assigned major number %d. To talk to\n", Major);
 	printk(KERN_INFO "the driver, create a dev file with\n");
@@ -408,7 +415,14 @@ static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
 	/*
 	 * Number of bytes actually written to the buffer
 	 */
-	int bytes_read = 0;
+	int bytes_read;
+
+	bytes_read = 0;
+
+	if (wait_event_interruptible(wq, irq_on == 1)) {
+		pr_info("wait_event_interruptible returned ERESTARTSYS\n");
+		return -ERESTARTSYS;
+	}
 
 	if (!enable_tracing)
 		goto out;
@@ -419,12 +433,17 @@ static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
 	}
 
 	if (enable_sched_latency) {
-		preempt_disable();
-		bytes_read = snprintf(buffer, length, "%d %d,%d %d,%d %d,%d\n",
-				total, (int)ti.tv_sec, (int)ti.tv_usec,
-				(int)th.tv_sec, (int)th.tv_usec, (int)tc.tv_sec,
-				(int)tc.tv_usec);
-		preempt_enable();
+		struct timeval ts;
+
+		do_gettimeofday(&ts);
+
+		bytes_read = snprintf(buffer, length, "%d %d,%d %d,%d %d,%d %d,%d\n",
+				total, (int)ti.tv_sec,
+				(int)ti.tv_usec, (int)th.tv_sec,
+				(int)th.tv_usec, (int)tc.tv_sec,
+				(int)tc.tv_usec, (int)ts.tv_sec,
+				(int)ts.tv_usec);
+
 		goto out;
 	}
 
@@ -433,7 +452,7 @@ static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
 	 * return 0 signifying end of file
 	 */
 	if (*msg_Ptr == 0)
-		return 0;
+		goto out;
 
 	/*
 	 * Actually put the data into the buffer
@@ -456,6 +475,7 @@ static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
 	 * Most read functions return the number of bytes put into the buffer
 	 */
 out:
+	irq_on = 0;
 	return bytes_read;
 }
 
