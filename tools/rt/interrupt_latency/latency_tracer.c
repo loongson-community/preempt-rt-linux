@@ -247,11 +247,6 @@ int main(int argc, char *argv[])
 				"to CPU #%d\n", affinity);
 	}
 
-	system("insmod interrupt_latency.ko");
-	system("rm /dev/interrupt_latency");
-	system("bash -c \"`dmesg | grep mknod | head -1 | tr -d \"\'.\"`\"");
-	system("chrt -p 98 `ps -ef | grep interrupt | grep -v grep | tr -s ' ' | cut -d' ' -f2`");
-
 	path = open("/dev/interrupt_latency", O_RDWR);
 	if (path < 0) {
 		fprintf(stderr, "ERROR: Could not access interrupt latency device, "
@@ -266,19 +261,19 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ERRROR: interrupt latency device locked\n");
 		retval = 1;
 	} else {
-		char timestamp[65];
+		char timestamp[80];
 		char sigtest[8];
-		char stop_interrupt_latency[8] = "0";
-		char enable_interrupt_latency[8] = "1";
-		char enable_sched_latency[8] = "4";
-		char stop_sched_latency[8] = "5";
-		struct timeval oldit, interrupttime, handletime, exittime, schedtime, diff, hediff;
-		unsigned int diffno = 0, total = 0, total_base = 0;
+		struct timeval interrupttime, handletime, exittime, schedtime, diff, hediff;
+		unsigned int diffno = 0, old_total, total = 0;
 		unsigned int mindiff1 = UINT_MAX, maxdiff1 = 0;
 		unsigned int mindiff2 = UINT_MAX, maxdiff2 = 0;
 		unsigned int mindiff3 = UINT_MAX, maxdiff3 = 0;
 		unsigned int mindiff4 = UINT_MAX, maxdiff4 = 0;
 		double sumdiff1 = 0.0, sumdiff2 = 0.0, sumdiff3 = 0.0, sumdiff4 = 0;
+		struct timespec ts;
+
+		ts.tv_sec = interval / USEC_PER_SEC;
+		ts.tv_nsec = (interval % USEC_PER_SEC) * 1000;
 
 		if (tracelimit)
 			kernvar(O_WRONLY, "tracing_enabled", "1", 1);
@@ -288,47 +283,25 @@ int main(int argc, char *argv[])
 		signal(SIGINT, signalhandler);
 		signal(SIGTERM, signalhandler);
 
-		oldit.tv_sec = 0;
-		oldit.tv_usec = 0;
-		write(path, enable_interrupt_latency, strlen(enable_interrupt_latency));
-		write(path, stop_interrupt_latency, strlen(stop_interrupt_latency));
-		write(path, enable_interrupt_latency, strlen(enable_interrupt_latency));
-		write(path, enable_sched_latency, strlen(enable_sched_latency));
 		while (1) {
-			struct timespec ts;
+			read(path, timestamp, sizeof(timestamp));	/* blocking here. */
 
-			ts.tv_sec = interval / USEC_PER_SEC;
-			ts.tv_nsec = (interval % USEC_PER_SEC) * 1000;
-
-			if (read(path, timestamp, sizeof(timestamp)) < 0) {
-				fprintf(stderr, "WARNING: read no data\n");
-				goto wait;
-			}
-			gettimeofday(&schedtime, NULL);
-			if (sscanf(timestamp, "%d %d,%d %d,%d %d,%d\n", &total,
+			/* gettimeofday(&schedtime, NULL); */
+			old_total = total;
+			if (sscanf(timestamp, "%d %d,%d %d,%d %d,%d %d,%d\n", &total,
 				&interrupttime.tv_sec, &interrupttime.tv_usec,
 				&handletime.tv_sec, &handletime.tv_usec,
-				&exittime.tv_sec, &exittime.tv_usec) < 0)
+				&exittime.tv_sec, &exittime.tv_usec,
+				&schedtime.tv_sec, &schedtime.tv_usec) < 0)
 				break;
-			oldit = interrupttime;
-
-			if (total_base == 0)
-				total_base = total;
-			/*
-			if (total_base != 0 && total_base < total) {
-				printf("\033[?25h");
-				printf("\033[2J");
-				printf("Missed interrupt, get: %d, orig: %d\n", total_base, total);
-				break;
-			}*/
 
 			diffno++;
+
 			if (max_cycles && diffno >= max_cycles)
 				shutdown = 1;
 
-			printf("Samples: %10d Orig: %10d Missed: %10d\n",
-					diffno, total, total -
-					(total_base+diffno));
+			printf("Samples: %10d Total: %10d Missed: %10d\n",
+					diffno, total, total - old_total - 1);
 
 			timersub(&handletime, &interrupttime, &diff);
 			if (diff.tv_usec < mindiff1)
@@ -342,7 +315,7 @@ int main(int argc, char *argv[])
 
 			timersub(&exittime, &handletime, &diff);
 			hediff = diff;
-#if 0
+
 			if (diff.tv_usec < mindiff2)
 				mindiff2 = diff.tv_usec;
 			if (diff.tv_usec > maxdiff2)
@@ -351,7 +324,7 @@ int main(int argc, char *argv[])
 			printf("Handler Latency:   Min %8d, Cur %8d, Avg %8d, Max %8d\n",
 			       mindiff2, (int)diff.tv_usec,
 			       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
-#endif
+
 			timersub(&schedtime, &exittime, &diff);
 			if (diff.tv_usec < mindiff3)
 				mindiff3 = diff.tv_usec;
@@ -363,7 +336,7 @@ int main(int argc, char *argv[])
 			       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
 
 			timersub(&schedtime, &interrupttime, &diff);
-			timersub(&diff, &hediff, &diff);
+			/* timersub(&diff, &hediff, &diff); */
 			if (diff.tv_usec < mindiff4)
 				mindiff4 = diff.tv_usec;
 			if (diff.tv_usec > maxdiff4)
@@ -373,8 +346,7 @@ int main(int argc, char *argv[])
 			       mindiff4, (int)diff.tv_usec,
 			       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
 
-			printf("\033[4A");
-wait:
+			printf("\033[5A");
 			after.tv_sec = 0;
 			if ((tracelimit && diff.tv_usec > tracelimit) ||
 			    shutdown) {
@@ -384,11 +356,9 @@ wait:
 					stop_tracing();
 				break;
 			}
-			nanosleep(&ts, NULL);
+			/* nanosleep(&ts, NULL); */
 			printf("\033[?25l");
 		}
-		write(path, stop_interrupt_latency, strlen(stop_interrupt_latency));
-		write(path, stop_sched_latency, strlen(stop_sched_latency));
 	}
 
 	close(path);
