@@ -263,36 +263,38 @@ int main(int argc, char *argv[])
 	} else {
 		char timestamp[80];
 		char sigtest[8];
-		struct timeval interrupttime, handletime, exittime, schedtime, diff, hediff;
-		unsigned int diffno = 0, old_total, total = 0;
+		char response_latency[8] = "4";
+		char interval_string[8];
+		struct timeval interrupttime, handletime, exittime, schedtime, diff;
+		unsigned int diffno = 0, old_total, total = 0, maxmiss, diffmiss;
 		unsigned int mindiff1 = UINT_MAX, maxdiff1 = 0;
 		unsigned int mindiff2 = UINT_MAX, maxdiff2 = 0;
 		unsigned int mindiff3 = UINT_MAX, maxdiff3 = 0;
 		unsigned int mindiff4 = UINT_MAX, maxdiff4 = 0;
 		double sumdiff1 = 0.0, sumdiff2 = 0.0, sumdiff3 = 0.0, sumdiff4 = 0;
-		struct timespec ts;
-
-		ts.tv_sec = interval / USEC_PER_SEC;
-		ts.tv_nsec = (interval % USEC_PER_SEC) * 1000;
 
 		if (tracelimit)
 			kernvar(O_WRONLY, "tracing_enabled", "1", 1);
 
+		sprintf(interval_string, "%d", interval);
 		sprintf(sigtest, "%d", SIGTEST);
 		signal(SIGTEST, signalhandler);
 		signal(SIGINT, signalhandler);
 		signal(SIGTERM, signalhandler);
 
-		while (1) {
-			read(path, timestamp, sizeof(timestamp));	/* blocking here. */
+		write(path, response_latency, sizeof(response_latency));
+		write(path, interval_string, sizeof(interval_string));
 
-			/* gettimeofday(&schedtime, NULL); */
+		while (1) {
+			/* blocking here until the data come */
+			read(path, timestamp, sizeof(timestamp));
+
+			gettimeofday(&schedtime, NULL);
 			old_total = total;
-			if (sscanf(timestamp, "%d %d,%d %d,%d %d,%d %d,%d\n", &total,
+			if (sscanf(timestamp, "%d %d,%d %d,%d %d,%d\n", &total,
 				&interrupttime.tv_sec, &interrupttime.tv_usec,
 				&handletime.tv_sec, &handletime.tv_usec,
-				&exittime.tv_sec, &exittime.tv_usec,
-				&schedtime.tv_sec, &schedtime.tv_usec) < 0)
+				&exittime.tv_sec, &exittime.tv_usec) < 0)
 				break;
 
 			diffno++;
@@ -300,8 +302,16 @@ int main(int argc, char *argv[])
 			if (max_cycles && diffno >= max_cycles)
 				shutdown = 1;
 
-			printf("Samples: %10d Total: %10d Missed: %10d\n",
-					diffno, total, total - old_total - 1);
+			printf("Interrupt latency driver, Enter CTRL+^C to exit\n");
+			printf("Samples: %d\n", diffno);
+			printf("Interval: %d\n", interval);
+			printf("Total events: %d\n", total);
+			diffmiss = total - old_total - 1;
+			if (old_total == 0)
+				diffmiss = 0;
+			if (diffmiss > maxmiss)
+				maxmiss = diffmiss;
+			printf("Missed events: Max: %8d Curr: %8d\n", maxmiss, diffmiss);
 
 			timersub(&handletime, &interrupttime, &diff);
 			if (diff.tv_usec < mindiff1)
@@ -314,50 +324,49 @@ int main(int argc, char *argv[])
 			       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
 
 			timersub(&exittime, &handletime, &diff);
-			hediff = diff;
-
-			if (diff.tv_usec < mindiff2)
-				mindiff2 = diff.tv_usec;
-			if (diff.tv_usec > maxdiff2)
-				maxdiff2 = diff.tv_usec;
-			sumdiff2 += (double)diff.tv_usec;
-			printf("Handler Latency:   Min %8d, Cur %8d, Avg %8d, Max %8d\n",
-			       mindiff2, (int)diff.tv_usec,
-			       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
-
-			timersub(&schedtime, &exittime, &diff);
-			if (diff.tv_usec < mindiff3)
-				mindiff3 = diff.tv_usec;
-			if (diff.tv_usec > maxdiff3)
-				maxdiff3 = diff.tv_usec;
-			sumdiff3 += (double)diff.tv_usec;
-			printf("Schedule Latency:  Min %8d, Cur %8d, Avg %8d, Max %8d\n",
-			       mindiff3, (int)diff.tv_usec,
-			       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
-
-			timersub(&schedtime, &interrupttime, &diff);
-			/* timersub(&diff, &hediff, &diff); */
 			if (diff.tv_usec < mindiff4)
 				mindiff4 = diff.tv_usec;
 			if (diff.tv_usec > maxdiff4)
 				maxdiff4 = diff.tv_usec;
 			sumdiff4 += (double)diff.tv_usec;
-			printf("Response Latency:  Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+			printf("Handler Latency:   Min %8d, Cur %8d, Avg %8d, Max %8d\n",
 			       mindiff4, (int)diff.tv_usec,
 			       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
 
-			printf("\033[5A");
+			timersub(&schedtime, &exittime, &diff);
+			if (diff.tv_usec < mindiff2)
+				mindiff2 = diff.tv_usec;
+			if (diff.tv_usec > maxdiff2)
+				maxdiff2 = diff.tv_usec;
+			sumdiff2 += (double)diff.tv_usec;
+			printf("Scheduler Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+			       mindiff2, (int)diff.tv_usec,
+			       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
+
+			timersub(&schedtime, &interrupttime, &diff);
+			if (diff.tv_usec < mindiff3)
+				mindiff3 = diff.tv_usec;
+			if (diff.tv_usec > maxdiff3)
+				maxdiff3 = diff.tv_usec;
+			sumdiff3 += (double)diff.tv_usec;
+			printf("Response Latency:  Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+			       mindiff3, (int)diff.tv_usec,
+			       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
+
+			system("echo -n 'System Load:       '; cat /proc/loadavg");
+
 			after.tv_sec = 0;
 			if ((tracelimit && diff.tv_usec > tracelimit) ||
 			    shutdown) {
 				printf("\033[?25h");
-				printf("\033[2J");
 				if (tracelimit)
 					stop_tracing();
 				break;
 			}
-			/* nanosleep(&ts, NULL); */
 			printf("\033[?25l");
+			printf("\033[9A\n\n\n\n\n\n\033[9A");
+			if (diffno % 5 == 1)
+				printf("\033[2J");
 		}
 	}
 
