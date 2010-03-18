@@ -45,6 +45,7 @@
 #include <linux/time.h>
 #include <linux/smp_lock.h>
 #include <linux/types.h>
+#include <linux/delay.h>
 #include <linux/errno.h>
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
@@ -94,10 +95,27 @@ static char *msg_Ptr;
 #include <cs5536/cs5536_mfgpt.h>
 
 static u32 mfgpt_base;
+static int interval = 1000, period = PERIOD;	/* us */
 
 static inline void arch_irq_enable(void)
 {
-	outw(COMPARE, MFGPT0_CMP2);	/* set comparator2 */
+	u16 compare;
+	int hz;
+
+	/*
+	 * If the interval is smaller than 1000, we use the period of the timer
+	 * as the interval, the real interval is period + handler latency.
+	 */
+	if (interval < 1000) {
+		period = interval;
+		hz = USEC_PER_SEC / period;
+		pr_info("%s: period: %d, hz: %d\n", __func__, period, hz);
+		compare = (u16)(((u32)MFGPT_TICK_RATE + hz/2) / hz);
+	} else {
+		pr_info("%s: period: %d, hz: %d\n", __func__, PERIOD, HZ);
+		compare = COMPARE;
+	}
+	outw(compare, MFGPT0_CMP2);	/* set comparator2 */
 	outw(0, MFGPT0_CNT);	/* set counter to 0 */
 	outw(0xe310, MFGPT0_SETUP);
 }
@@ -157,7 +175,7 @@ static inline void arch_irq_disable(void)
 }
 #endif
 
-static struct timeval ti, th, tc, diff;
+static struct timeval ti, th, te, tc, diff;
 static u64 sum;
 static u32 total, max = 0, min = UINT_MAX;
 
@@ -227,14 +245,20 @@ static inline struct timeval timeval_sub(struct timeval lhs,
 
 static irqreturn_t irq_handler(int irq, void *dev_id)
 {
+	/* Handle interrupt */
 	local_irq_disable();
-	do_gettimeofday(&th);
+	arch_irq_handler();
 	arch_irq_disable();
+	/* Get the Handle time */
+	do_gettimeofday(&th);
 
+	/*
+	 * Interrupt time = The time we enabled the interrupt + its period
+	 */
 	ti = tc;
-	/* ti is the time the interrupt take place */
-	ti.tv_usec += PERIOD;
+	ti.tv_usec += period;
 
+	/* Calculate the latency: Handle time - Interrupt time */
 	diff = timeval_sub(th, ti);
 	if (diff.tv_usec > max)
 		max = diff.tv_usec;
@@ -243,12 +267,19 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 	sum += diff.tv_usec;
 
 	total++;
-
-	arch_irq_enable();
-	do_gettimeofday(&tc);
-	local_irq_enable();
+	/* Wakeup the user-space application */
 	irq_on = 1;
+	do_gettimeofday(&te);
 	wake_up_interruptible(&wq);
+	local_irq_enable();
+
+	/* Interrupt interval: the real interval should be interval + period */
+	msleep(interval / 1000);
+
+	local_irq_disable();
+	do_gettimeofday(&tc);
+	arch_irq_enable();
+	local_irq_enable();
 
 	return IRQ_HANDLED;
 }
@@ -307,20 +338,20 @@ static __init int interrupt_latency_init(void)
 	Major = register_chrdev(0, DEVICE_NAME, &fops);
 
 	if (Major < 0) {
-		printk(KERN_ALERT "Registering char device failed with %d\n",
+		pr_alert("Registering char device failed with %d\n",
 		       Major);
 		return Major;
 	}
 
 	init_waitqueue_head(&wq);
 
-	printk(KERN_INFO "I was assigned major number %d. To talk to\n", Major);
-	printk(KERN_INFO "the driver, create a dev file with\n");
-	printk(KERN_INFO "'mknod /dev/%s c %d 0'.\n", DEVICE_NAME, Major);
-	printk(KERN_INFO "Try various minor numbers. Try to cat and echo to\n");
-	printk(KERN_INFO "the device file.\n");
-	printk(KERN_INFO "Remove the device file and module when done.\n");
-	printk(KERN_INFO "==============================================\nUsage:\n"
+	pr_info("I was assigned major number %d. To talk to\n", Major);
+	pr_info("the driver, create a dev file with\n");
+	pr_info("'mknod /dev/%s c %d 0'.\n", DEVICE_NAME, Major);
+	pr_info("Try various minor numbers. Try to cat and echo to\n");
+	pr_info("the device file.\n");
+	pr_info("Remove the device file and module when done.\n");
+	pr_info("==============================================\nUsage:\n"
 		"o Disable it(it is enabled by default)\n"
 		"$ echo 0 > /dev/interrupt_latency\n"
 		"o Enable it\n"
@@ -337,14 +368,16 @@ static __init int interrupt_latency_init(void)
 		"$ echo 0 > /dev/interrupt_latency\n"
 		"$ ps -ef | grep interrupt // get the pid.\n"
 		"$ chrt -p 98 <pid>\n"
-		"$ echo 1 > /dev/interrupt_latency\n");
+		"$ echo 1 > /dev/interrupt_latency\n"
+		"o Set the interval of the interrupt(10 <= interval <= 100000000)"
+		"$ echo 1000 > /dev/interrupt_latency\n");
 
 	ret = init_irq();
 	if (ret) {
-		printk(KERN_ERR "Failed to setup irq: %d\n", IRQ_NUM);
+		pr_err("Failed to setup irq: %d\n", IRQ_NUM);
 		return ret;
 	} else
-		printk(KERN_INFO "Setup irq: %d\n", IRQ_NUM);
+		pr_info("Setup irq: %d\n", IRQ_NUM);
 
 	return SUCCESS;
 }
@@ -419,13 +452,17 @@ static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
 
 	bytes_read = 0;
 
+	if (!enable_tracing) {
+		pr_alert("Please enable the interrupt at first:\n"
+			"$ echo 1 > /dev/interrupt_latency");
+		goto out;
+	}
+
 	if (wait_event_interruptible(wq, irq_on == 1)) {
 		pr_info("wait_event_interruptible returned ERESTARTSYS\n");
 		return -ERESTARTSYS;
 	}
 
-	if (!enable_tracing)
-		goto out;
 
 	if (enable_diff_output) {
 		bytes_read = snprintf(buffer, length, "%d\n", (int)diff.tv_usec);
@@ -433,17 +470,10 @@ static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
 	}
 
 	if (enable_sched_latency) {
-		struct timeval ts;
-
-		do_gettimeofday(&ts);
-
-		bytes_read = snprintf(buffer, length, "%d %d,%d %d,%d %d,%d %d,%d\n",
-				total, (int)ti.tv_sec,
-				(int)ti.tv_usec, (int)th.tv_sec,
-				(int)th.tv_usec, (int)tc.tv_sec,
-				(int)tc.tv_usec, (int)ts.tv_sec,
-				(int)ts.tv_usec);
-
+		bytes_read = snprintf(buffer, length, "%d %d,%d %d,%d %d,%d\n",
+				total, (int)ti.tv_sec, (int)ti.tv_usec,
+				(int)th.tv_sec, (int)th.tv_usec,
+				(int)te.tv_sec, (int)te.tv_usec);
 		goto out;
 	}
 
@@ -510,6 +540,16 @@ device_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 			enable_sched_latency = 0;
 			break;
 		default:
+			irq_disable();
+			/* by default, we set the user input as hz\n */
+			if (cmd > 100000000 || cmd < 10) {
+				pr_info("%s: interval should be >= 10 & <= 100000000\n",
+						__func__);
+				interval = 1000;
+			} else
+				interval = cmd;
+			pr_info("interval is set to %d\n", interval);
+			irq_enable();
 			break;
 		}
 	}
