@@ -385,7 +385,7 @@ int main(int argc, char *argv[])
 					vdiff = diff2;
 					break;
 				}
-				printf("%8d:%8lu:%8ld\n", affinity, diffno - 1, vdiff);
+				printf("%d\n", vdiff);
 				if ((tracelimit && diff.tv_usec > tracelimit) ||
 					shutdown) {
 						if (tracelimit)
