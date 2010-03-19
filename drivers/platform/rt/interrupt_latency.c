@@ -101,6 +101,9 @@ static char *msg_Ptr;
 
 static u32 mfgpt_base;
 static int interval = 1000, period = PERIOD;	/* us */
+static struct timeval ti, th, te, tc, diff;
+static u64 sum;
+static u32 total, max = 0, min = UINT_MAX;
 
 static inline void arch_irq_enable(void)
 {
@@ -122,10 +125,21 @@ static inline void arch_irq_enable(void)
 	}
 	outw(compare, MFGPT0_CMP2);	/* set comparator2 */
 	outw(0, MFGPT0_CNT);	/* set counter to 0 */
+	do_gettimeofday(&tc);	/* get the interrupt time */
 	outw(0xe310, MFGPT0_SETUP);
 }
+
+static inline void arch_irq_handler(void)
+{
+	/* Ack */
+	outw(inw(MFGPT0_SETUP) | 0x4000, MFGPT0_SETUP);
+}
+
 static inline void arch_irq_disable(void)
 {
+	/* Get the Handle time */
+	do_gettimeofday(&th);
+	arch_irq_handler();
 	outw(inw(MFGPT0_SETUP) & 0x7fff, MFGPT0_SETUP);
 }
 
@@ -155,12 +169,6 @@ static inline void exit_arch_irq(void)
 	arch_irq_disable();
 }
 
-static inline void arch_irq_handler(void)
-{
-	/* Ack */
-	outw(inw(MFGPT0_SETUP) | 0x4000, MFGPT0_SETUP);
-}
-
 #else
 static inline int init_arch_irq(void)
 {
@@ -180,10 +188,6 @@ static inline void arch_irq_disable(void)
 }
 #endif
 
-static struct timeval ti, th, te, tc, diff;
-static u64 sum;
-static u32 total, max = 0, min = UINT_MAX;
-
 static void reset_variables(void)
 {
 	total = 0;
@@ -201,7 +205,6 @@ static void irq_enable(void)
 {
 	local_irq_disable();
 	arch_irq_enable();
-	do_gettimeofday(&tc);
 	reset_variables();
 	local_irq_enable();
 }
@@ -252,10 +255,7 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 {
 	/* Handle interrupt */
 	local_irq_disable();
-	arch_irq_handler();
 	arch_irq_disable();
-	/* Get the Handle time */
-	do_gettimeofday(&th);
 
 	/*
 	 * Interrupt time = The time we enabled the interrupt + its period
@@ -284,8 +284,7 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 	msleep(interval / 1000);
 	local_irq_disable();
 #endif
-
-	do_gettimeofday(&tc);
+	/* We get a more accurate interrupt time in the arch_irq_eanble() */
 	arch_irq_enable();
 	local_irq_enable();
 
@@ -313,7 +312,6 @@ static int init_irq(void)
 
 	local_irq_disable();
 	arch_irq_enable();
-	do_gettimeofday(&tc);
 	reset_variables();
 	local_irq_enable();
 
