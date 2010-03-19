@@ -300,6 +300,8 @@ int main(int argc, char *argv[])
 
 		if (verbose)
 			printf("Thread 0 Interval: %d\n", interval);
+		else
+			printf("Interrupt latency driver, Enter CTRL+^C to get the result\n");
 
 		while (1) {
 			/* blocking here until the data come */
@@ -384,42 +386,37 @@ int main(int argc, char *argv[])
 				continue;
 			}
 
-			printf("Interrupt latency driver, Enter CTRL+^C to exit\n");
-			printf("Samples: %d\n", diffno);
-			printf("Interval: %d\n", interval);
-			printf("Total events: %d\n", total);
-			printf("Missed events: Max: %8d Curr: %8d\n", maxmiss, diffmiss);
-
-			printf("Interrupt Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
-			       mindiff1, (int)diff1,
-			       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
-
-			printf("Handler Latency:   Min %8d, Cur %8d, Avg %8d, Max %8d\n",
-			       mindiff2, (int)diff2,
-			       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
-
-			printf("Scheduler Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
-			       mindiff3, (int)diff3,
-			       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
-
-			printf("Response Latency:  Min %8d, Cur %8d, Avg %8d, Max %8d\n",
-			       mindiff4, (int)diff4,
-			       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
-
-			system("echo -n 'System Load:       '; cat /proc/loadavg");
-
 			after.tv_sec = 0;
 			if ((tracelimit && diff.tv_usec > tracelimit) ||
 			    shutdown) {
-				printf("\033[?25h");
 				if (tracelimit)
 					stop_tracing();
+
+				printf("Samples: %d\n", diffno);
+				printf("Interval: %d\n", interval);
+				printf("Total events: %d\n", total);
+				printf("Missed events: Max: %8d Curr: %8d\n", maxmiss, diffmiss);
+
+				printf("Interrupt Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				       mindiff1, (int)diff1,
+				       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
+
+				printf("Handler Latency:   Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				       mindiff2, (int)diff2,
+				       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
+
+				printf("Scheduler Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				       mindiff3, (int)diff3,
+				       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
+
+				printf("Response Latency:  Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				       mindiff4, (int)diff4,
+				       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
+
+				system("echo -n 'System Load:       '; cat /proc/loadavg");
+
 				break;
 			}
-			printf("\033[?25l");
-			printf("\033[9A\n\n\n\n\n\n\033[9A");
-			if (diffno % 5 == 1)
-				printf("\033[2J");
 		}
 	}
 
