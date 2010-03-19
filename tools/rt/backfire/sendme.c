@@ -54,6 +54,7 @@ static int setaffinity = AFFINITY_UNSPECIFIED;
 static int affinity;
 static int tracelimit;
 static int priority;
+static int verbose;
 static int shutdown;
 static int max_cycles;
 static volatile struct timeval after;
@@ -112,6 +113,7 @@ static void display_help(void)
 	     "-b USEC  --breaktrace=USEC send break trace command when latency > USEC\n"
 	     "-i INTV  --interval=INTV   base interval of thread in us default=1000\n"
 	     "-l LOOPS --loops=LOOPS     number of loops: default=0(endless)\n"
+	     "-v       --verbose         enable the verbose output of the signal latency\n"
 	     "-p PRIO  --prio=PRIO       priority\n");
 	exit(1);
 }
@@ -130,10 +132,11 @@ static void process_options(int argc, char *argv[])
 			{"interval", required_argument, NULL, 'i'},
 			{"loops", required_argument, NULL, 'l'},
 			{"priority", required_argument, NULL, 'p'},
+			{"verbose", required_argument, NULL, 'v'},
 			{"help", no_argument, NULL, '?'},
 			{NULL, 0, NULL, 0}
 		};
-		int c = getopt_long(argc, argv, "a::b:i:l:p:",
+		int c = getopt_long(argc, argv, "a::b:i:l:p:v",
 				    long_options, &option_index);
 		if (c == -1)
 			break;
@@ -159,6 +162,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'p':
 			priority = atoi(optarg);
+			break;
+		case 'v':
+			verbose = 1;
 			break;
 		case '?':
 			error = 1;
@@ -258,12 +264,16 @@ int main(int argc, char *argv[])
 		char sigtest[8];
 		char timestamp[32];
 		struct timeval before, sendtime, switchtime, readtime, diff;
-		unsigned int diffno = 0;
-		unsigned int mindiff1 = UINT_MAX, maxdiff1 = 0;
-		unsigned int mindiff2 = UINT_MAX, maxdiff2 = 0;
-		unsigned int mindiff3 = UINT_MAX, maxdiff3 = 0;
-		unsigned int mindiff4 = UINT_MAX, maxdiff4 = 0;
+		unsigned int diffno = 0, vdiff;
+		unsigned int mindiff1 = UINT_MAX, maxdiff1 = 0, diff1;
+		unsigned int mindiff2 = UINT_MAX, maxdiff2 = 0, diff2;
+		unsigned int mindiff3 = UINT_MAX, maxdiff3 = 0, diff3;
+		unsigned int mindiff4 = UINT_MAX, maxdiff4 = 0, diff4;
 		double sumdiff1 = 0.0, sumdiff2 = 0.0, sumdiff3 = 0.0, sumdiff4 = 0.0;
+		struct timespec ts;
+
+		ts.tv_sec = interval / USEC_PER_SEC;
+		ts.tv_nsec = (interval % USEC_PER_SEC) * 1000;
 
 		if (tracelimit)
 			kernvar(O_WRONLY, "tracing_enabled", "1", 1);
@@ -273,12 +283,10 @@ int main(int argc, char *argv[])
 		signal(SIGINT, signalhandler);
 		signal(SIGTERM, signalhandler);
 
+		if (verbose)
+			printf("Thread 0 Interval: %d\n", interval);
+
 		while (1) {
-			struct timespec ts;
-
-			ts.tv_sec = interval / USEC_PER_SEC;
-			ts.tv_nsec = (interval % USEC_PER_SEC) * 1000;
-
 			gettimeofday(&before, NULL);
 			write(path, sigtest, strlen(sigtest));
 			while (after.tv_sec == 0)
@@ -293,47 +301,64 @@ int main(int argc, char *argv[])
 			if (max_cycles && diffno >= max_cycles)
 				shutdown = 1;
 
-			printf("Samples: %8d\n", diffno);
 			timersub(&sendtime, &before, &diff);
-			if (diff.tv_usec < mindiff1)
-				mindiff1 = diff.tv_usec;
-			if (diff.tv_usec > maxdiff1)
-				maxdiff1 = diff.tv_usec;
-			sumdiff1 += (double)diff.tv_usec;
-			printf("Signal To:      Min %4d, Cur %4d, Avg %4d, Max %4d\n",
-			       mindiff1, (int)diff.tv_usec,
-			       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
+			diff1 = diff.tv_usec;
+			if (diff1 < mindiff1)
+				mindiff1 = diff1;
+			if (diff1 > maxdiff1)
+				maxdiff1 = diff1;
+			sumdiff1 += (double)diff1;
 
 			timersub(&after, &sendtime, &diff);
-			if (diff.tv_usec < mindiff2)
-				mindiff2 = diff.tv_usec;
-			if (diff.tv_usec > maxdiff2)
-				maxdiff2 = diff.tv_usec;
-			sumdiff2 += (double)diff.tv_usec;
-			printf("Signal From:    Min %4d, Cur %4d, Avg %4d, Max %4d\n",
-			       mindiff2, (int)diff.tv_usec,
-			       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
+			diff2 = diff.tv_usec;
+			if (diff2 < mindiff2)
+				mindiff2 = diff2;
+			if (diff2 > maxdiff2)
+				maxdiff2 = diff2;
+			sumdiff2 += (double)diff2;
 
 			timersub(&switchtime, &after, &diff);
-			if (diff.tv_usec < mindiff3)
-				mindiff3 = diff.tv_usec;
-			if (diff.tv_usec > maxdiff3)
-				maxdiff3 = diff.tv_usec;
-			sumdiff3 += (double)diff.tv_usec;
-			printf("Context Switch: Min %4d, Cur %4d, Avg %4d, Max %4d\n",
-			       mindiff3, (int)diff.tv_usec,
-			       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
+			diff3 = diff.tv_usec;
+			if (diff3 < mindiff3)
+				mindiff3 = diff3;
+			if (diff3 > maxdiff3)
+				maxdiff3 = diff3;
+			sumdiff3 += (double)diff3;
 
 			timersub(&readtime, &switchtime, &diff);
-			if (diff.tv_usec < mindiff4)
-				mindiff4 = diff.tv_usec;
-			if (diff.tv_usec > maxdiff4)
-				maxdiff4 = diff.tv_usec;
-			sumdiff4 += (double)diff.tv_usec;
-			printf("File Read:      Min %4d, Cur %4d, Avg %4d, Max %4d\n",
-			       mindiff4, (int)diff.tv_usec,
-			       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
+			diff4 = diff.tv_usec;
+			if (diff4 < mindiff4)
+				mindiff4 = diff4;
+			if (diff4 > maxdiff4)
+				maxdiff4 = diff4;
+			sumdiff4 += (double)diff4;
 
+			if (verbose) {
+				/* Only print the Signal latency from kernel */
+				vdiff = diff2;
+				printf("%d\n", vdiff);
+				if ((tracelimit && diff.tv_usec > tracelimit) ||
+					shutdown) {
+						if (tracelimit)
+							stop_tracing();
+					break;
+				}
+				continue;
+			}
+
+			printf("Samples: %8d\n", diffno);
+			printf("Signal To:      Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+			       mindiff1, (int)diff1,
+			       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
+			printf("Signal From:    Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+			       mindiff2, (int)diff2,
+			       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
+			printf("Context Switch: Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+			       mindiff3, (int)diff3,
+			       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
+			printf("File Read:      Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+			       mindiff4, (int)diff4,
+			       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
 			after.tv_sec = 0;
 			if ((tracelimit && diff.tv_usec > tracelimit) ||
 			    shutdown) {
