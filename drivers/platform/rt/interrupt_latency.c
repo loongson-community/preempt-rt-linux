@@ -55,6 +55,11 @@
 
 #include <asm/system.h>
 
+/*
+ * For the unthread interrupt, the period is fixed at 100 for we can not sleep
+ * in the interrupt handler and the period can not be too higher, otherwise,
+ * the precison will be very low.
+ */
 #undef UNTHREAD_INTERRUPT
 
 /*
@@ -271,12 +276,15 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 	irq_on = 1;
 	do_gettimeofday(&te);
 	wake_up_interruptible(&wq);
-	local_irq_enable();
 
+	/* We can not sleep in un-thread interrupt handler for the  */
+#ifndef UNTHREAD_INTERRUPT
+	local_irq_enable();
 	/* Interrupt interval: the real interval should be interval + period */
 	msleep(interval / 1000);
-
 	local_irq_disable();
+#endif
+
 	do_gettimeofday(&tc);
 	arch_irq_enable();
 	local_irq_enable();
