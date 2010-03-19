@@ -57,10 +57,18 @@ enum {
 };
 static int setaffinity = AFFINITY_UNSPECIFIED;
 
+enum {
+	INTERRUPT_LATENCY = 1,
+	HANDLE_LATENCY,
+	SCHEDULE_LATENCY,
+	RESPONSE_LATENCY
+};
+
 static int affinity;
 static int tracelimit;
 static int priority;
 static int shutdown;
+static int verbose;
 static int max_cycles;
 static volatile struct timeval after;
 static int interval = 1000;
@@ -118,6 +126,7 @@ static void display_help(void)
 	     "-b USEC  --breaktrace=USEC send break trace command when latency > USEC\n"
 	     "-i INTV  --interval=INTV   base interval of thread in us default=1000\n"
 	     "-l LOOPS --loops=LOOPS     number of loops: default=0(endless)\n"
+	     "-v TYPE  --verbose=TYPE    latency type: Interrupt=1,Handle=2,chedule=3,Response=4\n"
 	     "-p PRIO  --prio=PRIO       priority\n");
 	exit(1);
 }
@@ -136,10 +145,11 @@ static void process_options(int argc, char *argv[])
 			{"interval", required_argument, NULL, 'i'},
 			{"loops", required_argument, NULL, 'l'},
 			{"priority", required_argument, NULL, 'p'},
+			{"verbose", required_argument, NULL, 'v'},
 			{"help", no_argument, NULL, '?'},
 			{NULL, 0, NULL, 0}
 		};
-		int c = getopt_long(argc, argv, "a::b:i:l:p:",
+		int c = getopt_long(argc, argv, "a::b:i:l:p:v:",
 				    long_options, &option_index);
 		if (c == -1)
 			break;
@@ -165,6 +175,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'p':
 			priority = atoi(optarg);
+			break;
+		case 'v':
+			verbose = atoi(optarg);
 			break;
 		case '?':
 			error = 1;
@@ -266,11 +279,11 @@ int main(int argc, char *argv[])
 		char response_latency[8] = "4";
 		char interval_string[8];
 		struct timeval interrupttime, handletime, exittime, schedtime, diff;
-		unsigned int diffno = 0, old_total, total = 0, maxmiss, diffmiss;
-		unsigned int mindiff1 = UINT_MAX, maxdiff1 = 0;
-		unsigned int mindiff2 = UINT_MAX, maxdiff2 = 0;
-		unsigned int mindiff3 = UINT_MAX, maxdiff3 = 0;
-		unsigned int mindiff4 = UINT_MAX, maxdiff4 = 0;
+		unsigned int diffno = 0, old_total, total = 0, maxmiss, diffmiss, vdiff;
+		unsigned int mindiff1 = UINT_MAX, maxdiff1 = 0, diff1;
+		unsigned int mindiff2 = UINT_MAX, maxdiff2 = 0, diff2;
+		unsigned int mindiff3 = UINT_MAX, maxdiff3 = 0, diff3;
+		unsigned int mindiff4 = UINT_MAX, maxdiff4 = 0, diff4;
 		double sumdiff1 = 0.0, sumdiff2 = 0.0, sumdiff3 = 0.0, sumdiff4 = 0;
 
 		if (tracelimit)
@@ -284,6 +297,9 @@ int main(int argc, char *argv[])
 
 		write(path, response_latency, sizeof(response_latency));
 		write(path, interval_string, sizeof(interval_string));
+
+		if (verbose)
+			printf("Thread 0 Interval: %d\n", interval);
 
 		while (1) {
 			/* blocking here until the data come */
@@ -302,56 +318,93 @@ int main(int argc, char *argv[])
 			if (max_cycles && diffno >= max_cycles)
 				shutdown = 1;
 
-			printf("Interrupt latency driver, Enter CTRL+^C to exit\n");
-			printf("Samples: %d\n", diffno);
-			printf("Interval: %d\n", interval);
-			printf("Total events: %d\n", total);
 			diffmiss = total - old_total - 1;
 			if (old_total == 0)
 				diffmiss = 0;
 			if (diffmiss > maxmiss)
 				maxmiss = diffmiss;
-			printf("Missed events: Max: %8d Curr: %8d\n", maxmiss, diffmiss);
 
 			timersub(&handletime, &interrupttime, &diff);
-			if (diff.tv_usec < mindiff1)
-				mindiff1 = diff.tv_usec;
-			if (diff.tv_usec > maxdiff1)
-				maxdiff1 = diff.tv_usec;
-			sumdiff1 += (double)diff.tv_usec;
-			printf("Interrupt Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
-			       mindiff1, (int)diff.tv_usec,
-			       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
+			diff1 = diff.tv_usec;
+			if (diff1 < mindiff1)
+				mindiff1 = diff1;
+			if (diff1 > maxdiff1)
+				maxdiff1 = diff1;
+			sumdiff1 += (double)diff1;
 
 			timersub(&exittime, &handletime, &diff);
-			if (diff.tv_usec < mindiff4)
-				mindiff4 = diff.tv_usec;
-			if (diff.tv_usec > maxdiff4)
-				maxdiff4 = diff.tv_usec;
-			sumdiff4 += (double)diff.tv_usec;
-			printf("Handler Latency:   Min %8d, Cur %8d, Avg %8d, Max %8d\n",
-			       mindiff4, (int)diff.tv_usec,
-			       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
+			diff2 = diff.tv_usec;
+			if (diff2 < mindiff2)
+				mindiff2 = diff2;
+			if (diff2 > maxdiff2)
+				maxdiff2 = diff2;
+			sumdiff2 += (double)diff2;
 
 			timersub(&schedtime, &exittime, &diff);
-			if (diff.tv_usec < mindiff2)
-				mindiff2 = diff.tv_usec;
-			if (diff.tv_usec > maxdiff2)
-				maxdiff2 = diff.tv_usec;
-			sumdiff2 += (double)diff.tv_usec;
-			printf("Scheduler Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
-			       mindiff2, (int)diff.tv_usec,
-			       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
+			diff3 = diff.tv_usec;
+			if (diff3 < mindiff3)
+				mindiff3 = diff3;
+			if (diff3 > maxdiff3)
+				maxdiff3 = diff3;
+			sumdiff3 += (double)diff3;
 
 			timersub(&schedtime, &interrupttime, &diff);
-			if (diff.tv_usec < mindiff3)
-				mindiff3 = diff.tv_usec;
-			if (diff.tv_usec > maxdiff3)
-				maxdiff3 = diff.tv_usec;
-			sumdiff3 += (double)diff.tv_usec;
-			printf("Response Latency:  Min %8d, Cur %8d, Avg %8d, Max %8d\n",
-			       mindiff3, (int)diff.tv_usec,
+			diff4 = diff.tv_usec;
+			if (diff4 < mindiff4)
+				mindiff4 = diff4;
+			if (diff4 > maxdiff4)
+				maxdiff4 = diff4;
+			sumdiff4 += (double)diff4;
+
+			if (verbose) {
+				switch (verbose) {
+				case INTERRUPT_LATENCY:
+					vdiff = diff1;
+					break;
+				case HANDLE_LATENCY:
+					vdiff = diff2;
+					break;
+				case SCHEDULE_LATENCY:
+					vdiff = diff3;
+					break;
+				case RESPONSE_LATENCY:
+					vdiff = diff4;
+					break;
+				default:
+					vdiff = diff2;
+					break;
+				}
+				printf("%8d:%8lu:%8ld\n", affinity, diffno - 1, vdiff);
+				if ((tracelimit && diff.tv_usec > tracelimit) ||
+					shutdown) {
+						if (tracelimit)
+							stop_tracing();
+					break;
+				}
+				continue;
+			}
+
+			printf("Interrupt latency driver, Enter CTRL+^C to exit\n");
+			printf("Samples: %d\n", diffno);
+			printf("Interval: %d\n", interval);
+			printf("Total events: %d\n", total);
+			printf("Missed events: Max: %8d Curr: %8d\n", maxmiss, diffmiss);
+
+			printf("Interrupt Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+			       mindiff1, (int)diff1,
+			       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
+
+			printf("Handler Latency:   Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+			       mindiff2, (int)diff2,
+			       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
+
+			printf("Scheduler Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+			       mindiff3, (int)diff3,
 			       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
+
+			printf("Response Latency:  Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+			       mindiff4, (int)diff4,
+			       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
 
 			system("echo -n 'System Load:       '; cat /proc/loadavg");
 
