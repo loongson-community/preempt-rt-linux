@@ -69,6 +69,7 @@ static int tracelimit;
 static int priority;
 static int shutdown;
 static int verbose;
+static int misslimit;
 static int max_cycles;
 static volatile struct timeval after;
 static int interval = 1000;
@@ -127,6 +128,7 @@ static void display_help(void)
 	     "-i INTV  --interval=INTV   base interval of thread in us default=1000\n"
 	     "-l LOOPS --loops=LOOPS     number of loops: default=0(endless)\n"
 	     "-v TYPE  --verbose=TYPE    latency type: Interrupt=1,Handle=2,chedule=3,Response=4\n"
+	     "-m MISS  --misses=MISS     number of the max events missed limited\n"
 	     "-p PRIO  --prio=PRIO       priority\n");
 	exit(1);
 }
@@ -146,10 +148,11 @@ static void process_options(int argc, char *argv[])
 			{"loops", required_argument, NULL, 'l'},
 			{"priority", required_argument, NULL, 'p'},
 			{"verbose", required_argument, NULL, 'v'},
+			{"miss", required_argument, NULL, 'm'},
 			{"help", no_argument, NULL, '?'},
 			{NULL, 0, NULL, 0}
 		};
-		int c = getopt_long(argc, argv, "a::b:i:l:p:v:",
+		int c = getopt_long(argc, argv, "a::b:i:l:p:v:m:",
 				    long_options, &option_index);
 		if (c == -1)
 			break;
@@ -178,6 +181,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'v':
 			verbose = atoi(optarg);
+			break;
+		case 'm':
+			misslimit = atoi(optarg);
 			break;
 		case '?':
 			error = 1;
@@ -325,6 +331,9 @@ int main(int argc, char *argv[])
 				diffmiss = 0;
 			if (diffmiss > maxmiss)
 				maxmiss = diffmiss;
+
+			if (misslimit && diffmiss >= misslimit)
+				shutdown = 1;
 
 			timersub(&handletime, &interrupttime, &diff);
 			diff1 = diff.tv_usec;
