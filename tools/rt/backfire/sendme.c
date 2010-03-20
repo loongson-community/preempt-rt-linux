@@ -285,6 +285,8 @@ int main(int argc, char *argv[])
 
 		if (verbose)
 			printf("Thread 0 Interval: %d\n", interval);
+		else
+			printf("Signal Latency Driver, Enter CTRL+^C to get the result\n");
 
 		while (1) {
 			gettimeofday(&before, NULL);
@@ -346,30 +348,29 @@ int main(int argc, char *argv[])
 				continue;
 			}
 
-			printf("Samples: %8d\n", diffno);
-			printf("Signal To:      Min %4d, Cur %4d, Avg %4d, Max %4d\n",
-			       mindiff1, (int)diff1,
-			       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
-			printf("Signal From:    Min %4d, Cur %4d, Avg %4d, Max %4d\n",
-			       mindiff2, (int)diff2,
-			       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
-			printf("Context Switch: Min %4d, Cur %4d, Avg %4d, Max %4d\n",
-			       mindiff3, (int)diff3,
-			       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
-			printf("File Read:      Min %4d, Cur %4d, Avg %4d, Max %4d\n",
-			       mindiff4, (int)diff4,
-			       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
 			after.tv_sec = 0;
 			if ((tracelimit && diff.tv_usec > tracelimit) ||
 			    shutdown) {
-				printf("\033[?25h");
 				if (tracelimit)
 					stop_tracing();
+
+				printf("Samples: %8d\n", diffno);
+				printf("Signal To:      Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+				       mindiff1, (int)diff1,
+				       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
+				printf("Signal From:    Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+				       mindiff2, (int)diff2,
+				       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
+				printf("Context Switch: Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+				       mindiff3, (int)diff3,
+				       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
+				printf("File Read:      Min %4d, Cur %4d, Avg %4d, Max %4d\n",
+				       mindiff4, (int)diff4,
+				       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
+
 				break;
 			}
 			nanosleep(&ts, NULL);
-			printf("\033[5A");
-			printf("\033[?25l");
 		}
 	}
 
