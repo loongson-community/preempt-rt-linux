@@ -419,7 +419,8 @@ static int device_open(struct inode *inode, struct file *file)
 	Device_Open++;
 
 	avg = sum / total;
-	sprintf(msg, "Cur: %-8d Avg: %-8d Min: %-8d Max: %-8d\n", (int)diff.tv_usec, avg, min, max);
+	sprintf(msg, "Samples: %-8d, Cur: %-8d Avg: %-8d Min: %-8d Max: %-8d\n",
+			total, (int)diff.tv_usec, avg, min, max);
 
 	msg_Ptr = msg;
 	try_module_get(THIS_MODULE);
