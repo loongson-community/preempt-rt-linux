@@ -285,7 +285,8 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 	local_irq_disable();
 #endif
 	/* We get a more accurate interrupt time in the arch_irq_eanble() */
-	arch_irq_enable();
+	if (enable_tracing)
+		arch_irq_enable();
 	local_irq_enable();
 
 	return IRQ_HANDLED;
