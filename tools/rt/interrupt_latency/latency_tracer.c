@@ -283,6 +283,8 @@ int main(int argc, char *argv[])
 		char timestamp[80];
 		char sigtest[8];
 		char response_latency[8] = "4";
+		char enable_tracing[8] = "1";
+		char disable_tracing[8] = "0";
 		char interval_string[8];
 		struct timeval interrupttime, handletime, exittime, schedtime, diff;
 		unsigned int diffno = 0, old_total, total = 0, maxmiss, diffmiss, vdiff;
@@ -301,13 +303,14 @@ int main(int argc, char *argv[])
 		signal(SIGINT, signalhandler);
 		signal(SIGTERM, signalhandler);
 
-		write(path, response_latency, sizeof(response_latency));
-		write(path, interval_string, sizeof(interval_string));
-
 		if (verbose)
 			printf("Thread 0 Interval: %d\n", interval);
 		else
 			printf("Interrupt latency driver, Enter CTRL+^C to get the result\n");
+
+		write(path, response_latency, sizeof(response_latency));
+		write(path, interval_string, sizeof(interval_string));
+		write(path, enable_tracing, sizeof(enable_tracing));
 
 		while (1) {
 			/* blocking here until the data come */
