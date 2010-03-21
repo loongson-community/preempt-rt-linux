@@ -8,28 +8,15 @@
  *
  *   o square wave generator, i.e. external timer, interrupt pin + external
  *   square wave generator...
- *   o sched_clock()
- *
- * Initialization:
- *
- *   o calculate the duration spent on calling sched_clock()
- *     t1 = sched_clock();
- *     for (i = 0; i <= LOOP; i ++)
- *       (void)sched_clock();
- *     t2 = sched_clock();
- *     delta = t2 - t1;
  *
  * Interrupt handler:
  *
- *   o time = sched_clock()
- *   o print the time and toggle the output: (time - delta) : 0|1
- *   o Interrupt latency = Th-Ti= (Th+delta) - (Ti+delta) = Th' - Ti'
+ *   o Interrupt latency = Th-Ti
  *
- *       Ti          Ti'                  Th          Th': output 1|0
- *       |<--delta--->|--------------------|<--delta-->|
- *       |<---------interrupt latency----->|
- *       ^                                 ^
- *       |                                 |
+ *       Ti                              Th
+ *       |<--------interrupt latency----->|
+ *       ^                                ^
+ *       |                                |
  *   interrupt                         interrupt handler
  *
  * Change Log:
