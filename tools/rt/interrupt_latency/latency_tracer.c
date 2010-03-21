@@ -406,19 +406,19 @@ int main(int argc, char *argv[])
 				printf("Total events: %d\n", total);
 				printf("Missed events: Max: %8d Curr: %8d\n", maxmiss, diffmiss);
 
-				printf("Interrupt Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				printf("Interrupt Latency:  Min %8d, Cur %8d, Avg %8d, Max %8d\n",
 				       mindiff1, (int)diff1,
 				       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
 
-				printf("Handler Latency:   Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				printf("Handler Latency:    Min %8d, Cur %8d, Avg %8d, Max %8d\n",
 				       mindiff2, (int)diff2,
 				       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
 
-				printf("Scheduler Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				printf("Scheduling Latency: Min %8d, Cur %8d, Avg %8d, Max %8d\n",
 				       mindiff3, (int)diff3,
 				       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
 
-				printf("Response Latency:  Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				printf("Response Latency:   Min %8d, Cur %8d, Avg %8d, Max %8d\n",
 				       mindiff4, (int)diff4,
 				       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
 
