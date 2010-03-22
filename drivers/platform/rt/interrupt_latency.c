@@ -104,12 +104,9 @@ static inline void arch_irq_enable(void)
 	if (interval < 1000) {
 		period = interval;
 		hz = USEC_PER_SEC / period;
-		pr_info("%s: period: %d, hz: %d\n", __func__, period, hz);
 		compare = (u16)(((u32)MFGPT_TICK_RATE + hz/2) / hz);
-	} else {
-		pr_info("%s: period: %d, hz: %d\n", __func__, PERIOD, HZ);
+	} else
 		compare = COMPARE;
-	}
 	outw(compare, MFGPT0_CMP2);	/* set comparator2 */
 	outw(0, MFGPT0_CNT);	/* set counter to 0 */
 	outw(0xe310, MFGPT0_SETUP);
