@@ -281,7 +281,7 @@ static inline int raw_irqs_disabled_flags(unsigned long flags)
 # define TRACE_IRQS_ON_RELOAD
 # define TRACE_IRQS_OFF
 # define LOCAL_IRQ_DISABLE	local_irq_disable
-# define LOCAL_IRQ_ENABLE	local_irq_eanble
+# define LOCAL_IRQ_ENABLE	local_irq_enable
 #endif
 
 #endif /* _ASM_IRQFLAGS_H */
