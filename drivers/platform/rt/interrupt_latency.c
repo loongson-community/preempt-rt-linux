@@ -112,7 +112,6 @@ static inline void arch_irq_enable(void)
 	}
 	outw(compare, MFGPT0_CMP2);	/* set comparator2 */
 	outw(0, MFGPT0_CNT);	/* set counter to 0 */
-	do_gettimeofday(&tc);	/* get the interrupt time */
 	outw(0xe310, MFGPT0_SETUP);
 }
 
@@ -124,9 +123,6 @@ static inline void arch_irq_handler(void)
 
 static inline void arch_irq_disable(void)
 {
-	/* Get the Handle time */
-	do_gettimeofday(&th);
-	arch_irq_handler();
 	outw(inw(MFGPT0_SETUP) & 0x7fff, MFGPT0_SETUP);
 }
 
@@ -242,6 +238,9 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 {
 	/* Handle interrupt */
 	local_irq_disable();
+	/* Get the Handle time */
+	do_gettimeofday(&th);
+	arch_irq_handler();
 	arch_irq_disable();
 
 	/*
@@ -272,8 +271,10 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 	local_irq_disable();
 #endif
 	/* We get a more accurate interrupt time in the arch_irq_eanble() */
-	if (enable_tracing)
+	if (enable_tracing) {
 		arch_irq_enable();
+		do_gettimeofday(&tc);	/* get the interrupt time */
+	}
 	local_irq_enable();
 
 	return IRQ_HANDLED;
