@@ -274,10 +274,14 @@ static inline int raw_irqs_disabled_flags(unsigned long flags)
 	TRACE_IRQS_RELOAD_REGS
 # define TRACE_IRQS_OFF							\
 	jal	trace_hardirqs_off
-#else
+#define LOCAL_IRQ_DISABLE	local_irq_disable; TRACE_IRQS_OFF
+#define LOCAL_IRQ_ENABLE	local_irq_enable; TRACE_IRQS_ON
+#else	/* !CONFIG_TRACE_IRQFLAGS */
 # define TRACE_IRQS_ON
 # define TRACE_IRQS_ON_RELOAD
 # define TRACE_IRQS_OFF
+# define LOCAL_IRQ_DISABLE	local_irq_disable
+# define LOCAL_IRQ_ENABLE	local_irq_eanble
 #endif
 
 #endif /* _ASM_IRQFLAGS_H */
