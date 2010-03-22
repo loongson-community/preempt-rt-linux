@@ -16,6 +16,7 @@
 #include <asm/isadep.h>
 #include <asm/thread_info.h>
 #include <asm/war.h>
+#include <asm/irqflags.h>
 #ifdef CONFIG_MIPS_MT_SMTC
 #include <asm/mipsmtregs.h>
 #endif
@@ -30,7 +31,7 @@
 	.align	5
 #ifndef CONFIG_PREEMPT
 FEXPORT(ret_from_exception)
-	local_irq_disable			# preempt stop
+	LOCAL_IRQ_DISABLE			# preempt stop
 	b	__ret_from_irq
 #endif
 FEXPORT(ret_from_irq)
@@ -41,7 +42,7 @@ FEXPORT(__ret_from_irq)
 	beqz	t0, resume_kernel
 
 resume_userspace:
-	local_irq_disable		# make sure we dont miss an
+	LOCAL_IRQ_DISABLE		# make sure we dont miss an
 					# interrupt setting need_resched
 					# between sampling and return
 	LONG_L	a2, TI_FLAGS($28)	# current->work
@@ -51,7 +52,7 @@ resume_userspace:
 
 #ifdef CONFIG_PREEMPT
 resume_kernel:
-	local_irq_disable
+	LOCAL_IRQ_DISABLE
 	lw	t0, TI_PRE_COUNT($28)
 	bnez	t0, restore_all
 need_resched:
@@ -69,7 +70,7 @@ FEXPORT(ret_from_fork)
 	jal	schedule_tail		# a0 = struct task_struct *prev
 
 FEXPORT(syscall_exit)
-	local_irq_disable		# make sure need_resched and
+	LOCAL_IRQ_DISABLE		# make sure need_resched and
 					# signals dont change between
 					# sampling and return
 	LONG_L	a2, TI_FLAGS($28)	# current->work
@@ -167,7 +168,7 @@ syscall_exit_work:
 	li	t0, _TIF_SYSCALL_TRACE | _TIF_SYSCALL_AUDIT
 	and	t0, a2			# a2 is preloaded with TI_FLAGS
 	beqz	t0, work_pending	# trace bit set?
-	local_irq_enable		# could let do_syscall_trace()
+	LOCAL_IRQ_ENABLE		# could let do_syscall_trace()
 					# call schedule() instead
 	move	a0, sp
 	li	a1, 1
