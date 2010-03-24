@@ -50,17 +50,17 @@ static __init int sched_clock_latency_init(void)
 	Major = register_chrdev(0, DEVICE_NAME, &fops);
 
 	if (Major < 0) {
-		printk(KERN_ALERT "Registering char device failed with %d\n",
+		pr_alert("Registering char device failed with %d\n",
 		       Major);
 		return Major;
 	}
 
-	printk(KERN_INFO "I was assigned major number %d. To talk to\n", Major);
-	printk(KERN_INFO "the driver, create a dev file with\n");
-	printk(KERN_INFO "'mknod /dev/%s c %d 0'.\n", DEVICE_NAME, Major);
-	printk(KERN_INFO "Try various minor numbers. Try to cat and echo to\n");
-	printk(KERN_INFO "the device file.\n");
-	printk(KERN_INFO "Remove the device file and module when done.\n");
+	pr_info("I was assigned major number %d. To talk to\n", Major);
+	pr_info("the driver, create a dev file with\n");
+	pr_info("'mknod /dev/%s c %d 0'.\n", DEVICE_NAME, Major);
+	pr_info("Try various minor numbers. Try to cat and echo to\n");
+	pr_info("the device file.\n");
+	pr_info("Remove the device file and module when done.\n");
 
 	return SUCCESS;
 }
@@ -80,9 +80,9 @@ static __exit void sched_clock_latency_exit(void)
  * Methods
  */
 
-static u64 loop, total;
-unsigned int min = UINT_MAX, max = 0, avg = 0;
-int func_no;
+static u64 loop, sum;
+static unsigned int min = UINT_MAX, max = 0, avg = 0, diff;
+static int func_no, verbose;
 
 enum {
 	CLOCK_START = -1,
@@ -109,7 +109,6 @@ static char func_name[CLOCK_NUM][50] = {
 	"unknown",
 };
 
-#ifdef CALCULATE_MAX_MIN
 static inline unsigned int get_clock(int func_no)
 {
 	unsigned int diff;
@@ -136,63 +135,34 @@ static inline unsigned int get_clock(int func_no)
 			t0 = sched_clock();
 		break;
 	default:
-		printk(KERN_ALERT "Sorry, no such function.\n");
+		pr_alert("Sorry, no such function.\n");
 		break;
 	}
 	return diff;
 }
-#else
-static inline unsigned int get_clock(int func_no)
-{
-	static u64 t;
-	struct timespec tv;
-
-	switch (func_no) {
-	case GETNSTIMEOFDAY:
-		getnstimeofday(&tv);
-		t = timespec_to_ns(&tv);
-		break;
-	case SCHED_CLOCK:
-		t = sched_clock();
-		break;
-	default:
-		printk(KERN_ALERT "Sorry, no such function.\n");
-		break;
-	}
-	return t;
-}
-#endif
 
 static void calculate_latency(int func_no)
 {
-	u64 t0, t1;
 	int i;
-	unsigned int __maybe_unused diff;
 
 	/* Init */
 	max = 0;
 	min = UINT_MAX;
+	sum = 0;
 
-	local_irq_disable();
-	t0 = sched_clock();
 	(void)get_clock(func_no);
-	for (i = 0; i < loop - 1; i++) {
-#ifdef CALCULATE_MAX_MIN
+	for (i = 0; i < loop; i++) {
 		diff = get_clock(func_no);
 		if (diff > max)
 			max = diff;
 		else if (diff < min)
 			min = diff;
-#else
-		(void)get_clock(func_no);
-#endif
+		sum += diff;
+		if (verbose)
+			pr_info("%d\n", diff);
 	}
-	t1 = sched_clock();
-	local_irq_enable();
 
-	total = t1 - t0;
-	avg = total;
-	do_div(avg, loop);
+	avg = sum / loop;
 }
 
 /*
@@ -209,16 +179,19 @@ static int device_open(struct inode *inode, struct file *file)
 	if (loop == 0)
 		sprintf(msg,
 			"Please set the loop and clock function via /dev/%s,\n"
-			"i.e. $ echo <loop> <clock_func_num> > /dev/%s\n"
+			"i.e. $ echo <loop> <clock_func_num> <verbose> > /dev/%s\n"
 			"<loop>: any unsigned number >= 2, <= 10000000\n"
 			"<clock_func_num>:\n"
 			"\t0: sched_clock\n"
-			"\t1: getnstimeofday\n", DEVICE_NAME, DEVICE_NAME);
+			"\t1: getnstimeofday\n"
+			"<verbose>: 0 or 1\n"
+			"\t0: means not verbose output\n"
+			"\t1: verbose output, please use dmesg to get it.\n", DEVICE_NAME, DEVICE_NAME);
 	else
 		sprintf(msg,
-			"func: %s, loop: %lld, total: %lld,"
+			"func: %s, loop: %lld, sum: %lld,"
 			" avg: %d, max: %d, min: %d\n",
-			func_name[func_no], loop, total, avg, max, min);
+			func_name[func_no], loop, sum, avg, max, min);
 
 	msg_Ptr = msg;
 	try_module_get(THIS_MODULE);
@@ -292,19 +265,17 @@ static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
 static ssize_t
 device_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 {
-	if (sscanf(buff, "%lld %d", &loop, &func_no) >= 1) {
+	if (sscanf(buff, "%lld %d %d", &loop, &func_no, &verbose) >= 1) {
 		if (!valid_loop(loop))
-			printk(KERN_ERR
-			       "Invalid loop no: %lld, "
+			pr_err("Invalid loop no: %lld, "
 			       "loop must >= 2, <= 10000000\n", loop);
 		else if (!valid_func(func_no))
-			printk(KERN_ERR "Unknown clock function\n");
+			pr_err("Unknown clock function\n");
 		else {
-			printk(KERN_ALERT "Please wait, is calcaulating...\n");
+			pr_alert("Please wait, is calcaulating...\n");
 			calculate_latency(func_no);
-			printk(KERN_ALERT "Calculation is finished, please \n");
-			printk(KERN_ALERT "get the result via cat /dev/%s \n",
-			       DEVICE_NAME);
+			pr_alert("Calculation is finished, please \n");
+			pr_alert("get the statistic result via cat /dev/%s \n", DEVICE_NAME);
 		}
 	}
 	return strlen(buff);
