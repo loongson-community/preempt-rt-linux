@@ -23,6 +23,9 @@
  *
  *   o 03/16 2010, using do_gettimeofday() instead of sched_clock() to
  *   communicate with the user-space application.
+ *   o 03/24 2010, using getnstimeofday() instead of do_gettimeofday(), the
+ *   same to the user-space, we should use clock_gettime() in user-space
+ *   instead of gettimeofday(), then now, all in ns except the interval.
  */
 
 #include <linux/kernel.h>
@@ -83,12 +86,12 @@ static char *msg_Ptr;
 
 #undef HZ
 #define HZ 10000
-#define PERIOD 100	/* us, USEC_PER_SEC / HZ */
+#define PERIOD 100000	/* ns, NSEC_PER_SEC / HZ */
 #include <cs5536/cs5536_mfgpt.h>
 
 static u32 mfgpt_base;
 static int interval = 1000, period = PERIOD;	/* us */
-static struct timeval ti, th, te, tc, diff;
+static struct timespec ti, th, te, tc, diff;
 static u64 sum;
 static u32 total, max = 0, min = UINT_MAX;
 
@@ -101,9 +104,8 @@ static inline void arch_irq_set_compare(void)
 	 * as the interval, the real interval is period + handler latency.
 	 */
 	if (interval < 1000) {
-
-		period = interval;
-		hz = USEC_PER_SEC / period;
+		hz = USEC_PER_SEC / interval;
+		period = interval * 1000;	/* us -> ns */
 		compare = (u16)(((u32)MFGPT_TICK_RATE + hz/2) / hz);
 	} else
 		compare = COMPARE;
@@ -180,9 +182,11 @@ static void reset_variables(void)
 	sum = 0;
 	min = UINT_MAX;
 	ti.tv_sec = 0;
-	ti.tv_usec = 0;
+	ti.tv_nsec = 0;
 	th.tv_sec = 0;
-	th.tv_usec = 0;
+	th.tv_nsec = 0;
+	te.tv_sec = 0;
+	te.tv_nsec = 0;
 	irq_on = 0;
 }
 
@@ -200,49 +204,19 @@ static void irq_disable(void)
 	arch_irq_disable();
 	reset_variables();
 	tc.tv_sec = 0;
-	tc.tv_usec = 0;
+	tc.tv_nsec = 0;
 }
 
 static int enable_diff_output;
 static int enable_sched_latency;
 static int enable_tracing = 1;
 
-static void set_normalized_timeval(struct timeval *tv, time_t sec, s64 usec)
-{
-	while (usec >= USEC_PER_SEC) {
-		/*
-		 * The following asm() prevents the compiler from
-		 * optimising this loop into a modulo operation. See
-		 * also __iter_div_u64_rem() in include/linux/time.h
-		 */
-		asm("" : "+rm"(usec));
-		usec -= USEC_PER_SEC;
-		++sec;
-	}
-	while (usec < 0) {
-		asm("" : "+rm"(usec));
-		usec += USEC_PER_SEC;
-		--sec;
-	}
-	tv->tv_sec = sec;
-	tv->tv_usec = usec;
-}
-
-static inline struct timeval timeval_sub(struct timeval lhs,
-						struct timeval rhs)
-{
-	struct timeval tv_delta;
-	set_normalized_timeval(&tv_delta, lhs.tv_sec - rhs.tv_sec,
-				lhs.tv_usec - rhs.tv_usec);
-	return tv_delta;
-}
-
 static irqreturn_t irq_handler(int irq, void *dev_id)
 {
 	/* Handle interrupt */
 	local_irq_disable();
 	/* Get the Handle time */
-	do_gettimeofday(&th);
+	getnstimeofday(&th);
 	arch_irq_handler();
 	arch_irq_disable();
 
@@ -250,20 +224,20 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 	 * Interrupt time = The time we enabled the interrupt + its period
 	 */
 	ti = tc;
-	ti.tv_usec += period;
+	ti.tv_nsec += period;
 
 	/* Calculate the latency: Handle time - Interrupt time */
-	diff = timeval_sub(th, ti);
-	if (diff.tv_usec > max)
-		max = diff.tv_usec;
-	else if (diff.tv_usec < min)
-		min = diff.tv_usec;
-	sum += diff.tv_usec;
+	diff = timespec_sub(th, ti);
+	if (diff.tv_nsec > max)
+		max = diff.tv_nsec;
+	else if (diff.tv_nsec < min)
+		min = diff.tv_nsec;
+	sum += diff.tv_nsec;
 
 	total++;
 	/* Wakeup the user-space application */
 	irq_on = 1;
-	do_gettimeofday(&te);
+	getnstimeofday(&te);
 	wake_up_interruptible(&wq);
 
 	/* We can not sleep in un-thread interrupt handler for the  */
@@ -278,7 +252,7 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 	/* We get a more accurate interrupt time in the arch_irq_eanble() */
 	if (enable_tracing) {
 		arch_irq_enable();
-		do_gettimeofday(&tc);	/* get the interrupt time */
+		getnstimeofday(&tc);	/* get the interrupt time */
 	}
 	local_irq_enable();
 
@@ -413,7 +387,7 @@ static int device_open(struct inode *inode, struct file *file)
 
 	avg = sum / total;
 	sprintf(msg, "Samples: %-8d Interval: %-8d Cur: %-8d Avg: %-8d Min: %-8d Max: %-8d\n",
-			total, interval, (int)diff.tv_usec, avg, min, max);
+			total, interval, (int)diff.tv_nsec, avg, min, max);
 
 	msg_Ptr = msg;
 	try_module_get(THIS_MODULE);
@@ -466,15 +440,15 @@ static ssize_t device_read(struct file *filp,	/* see include/linux/fs.h   */
 
 
 	if (enable_diff_output) {
-		bytes_read = snprintf(buffer, length, "%d\n", (int)diff.tv_usec);
+		bytes_read = snprintf(buffer, length, "%d\n", (int)diff.tv_nsec);
 		goto out;
 	}
 
 	if (enable_sched_latency) {
 		bytes_read = snprintf(buffer, length, "%d %d,%d %d,%d %d,%d\n",
-				total, (int)ti.tv_sec, (int)ti.tv_usec,
-				(int)th.tv_sec, (int)th.tv_usec,
-				(int)te.tv_sec, (int)te.tv_usec);
+				total, (int)ti.tv_sec, (int)ti.tv_nsec,
+				(int)th.tv_sec, (int)th.tv_nsec,
+				(int)te.tv_sec, (int)te.tv_nsec);
 		goto out;
 	}
 
