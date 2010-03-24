@@ -109,30 +109,23 @@ static char func_name[CLOCK_NUM][50] = {
 	"unknown",
 };
 
-static inline unsigned int get_clock(int func_no)
+static inline unsigned int get_clock_diff(int func_no)
 {
 	unsigned int diff;
-	static u64 t0, t1;
-	static struct timespec tv0;
-	struct timespec tv, diff_tv;
+	u64 t0, t1;
+	struct timespec tv0, tv1, diff_tv;
 
 	switch (func_no) {
 	case GETNSTIMEOFDAY:
-		if (tv0.tv_nsec || tv0.tv_sec) {
-			getnstimeofday(&tv);
-			diff_tv = timespec_sub(tv, tv0);
-			diff = timespec_to_ns(&diff_tv);
-			tv0 = tv;
-		} else
-			getnstimeofday(&tv0);
+		getnstimeofday(&tv0);
+		getnstimeofday(&tv1);
+		diff_tv = timespec_sub(tv1, tv0);
+		diff = timespec_to_ns(&diff_tv);
 		break;
 	case SCHED_CLOCK:
-		if (t0) {
-			t1 = sched_clock();
-			diff = t1 - t0;
-			t0 = t1;
-		} else
-			t0 = sched_clock();
+		t0 = sched_clock();
+		t1 = sched_clock();
+		diff = t1 - t0;
 		break;
 	default:
 		pr_alert("Sorry, no such function.\n");
@@ -150,9 +143,8 @@ static void calculate_latency(int func_no)
 	min = UINT_MAX;
 	sum = 0;
 
-	(void)get_clock(func_no);
 	for (i = 0; i < loop; i++) {
-		diff = get_clock(func_no);
+		diff = get_clock_diff(func_no);
 		if (diff > max)
 			max = diff;
 		else if (diff < min)
