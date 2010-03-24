@@ -81,7 +81,7 @@ static __exit void sched_clock_latency_exit(void)
  */
 
 static u64 loop, sum;
-static unsigned int min = UINT_MAX, max = 0, avg = 0, diff;
+static unsigned int min = UINT_MAX, max = 0, avg = 0, delta;
 static int func_no, verbose;
 
 enum {
@@ -111,21 +111,25 @@ static char func_name[CLOCK_NUM][50] = {
 
 static inline unsigned int get_clock_diff(int func_no)
 {
-	unsigned int diff;
+	unsigned int diff = 0;
 	u64 t0, t1;
-	struct timespec tv0, tv1, diff_tv;
+	struct timespec tv0, tv1, __maybe_unused diff_tv;
 
 	switch (func_no) {
 	case GETNSTIMEOFDAY:
 		getnstimeofday(&tv0);
 		getnstimeofday(&tv1);
+#ifdef DIFF
 		diff_tv = timespec_sub(tv1, tv0);
 		diff = timespec_to_ns(&diff_tv);
+#endif
 		break;
 	case SCHED_CLOCK:
 		t0 = sched_clock();
 		t1 = sched_clock();
+#ifdef DIFF
 		diff = t1 - t0;
+#endif
 		break;
 	default:
 		pr_alert("Sorry, no such function.\n");
@@ -136,14 +140,19 @@ static inline unsigned int get_clock_diff(int func_no)
 
 static void calculate_latency(int func_no)
 {
-	int i;
+	u64 t0, t1;
+	int i, __maybe_unused diff;
 
 	/* Init */
 	max = 0;
 	min = UINT_MAX;
 	sum = 0;
 
+	t0 = sched_clock();
 	for (i = 0; i < loop; i++) {
+#ifndef DIFF
+		(void)get_clock_diff(func_no);
+#else
 		diff = get_clock_diff(func_no);
 		if (diff > max)
 			max = diff;
@@ -152,8 +161,13 @@ static void calculate_latency(int func_no)
 		sum += diff;
 		if (verbose)
 			pr_info("%d\n", diff);
+#endif
 	}
+	t1 = sched_clock();
 
+	/* delta is the average time spending on calling the clock func */
+	delta = (t1 - t0) / (2 * loop);
+	/* avg is the average of the latency */
 	avg = sum / loop;
 }
 
@@ -182,8 +196,8 @@ static int device_open(struct inode *inode, struct file *file)
 	else
 		sprintf(msg,
 			"func: %s, loop: %lld, sum: %lld,"
-			" avg: %d, max: %d, min: %d\n",
-			func_name[func_no], loop, sum, avg, max, min);
+			" avg: %d, max: %d, min: %d delta: %d (ns)\n",
+			func_name[func_no], loop, sum, avg, max, min, delta);
 
 	msg_Ptr = msg;
 	try_module_get(THIS_MODULE);
