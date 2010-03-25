@@ -423,7 +423,7 @@ int main(int argc, char *argv[])
 				       mindiff2, diff2,
 				       (sumdiff2 / diffno) + 0.5, maxdiff2);
 
-				printf("Scheduling Latency: Min %8f, Cur %8f, Avg %8f, Max %8f\n",
+				printf("Scheduler Latency:  Min %8f, Cur %8f, Avg %8f, Max %8f\n",
 				       mindiff3, diff3,
 				       (sumdiff3 / diffno) + 0.5, maxdiff3);
 
