@@ -92,28 +92,23 @@ static struct timeval ti, th, te, tc, diff;
 static u64 sum;
 static u32 total, max = 0, min = UINT_MAX;
 
-static inline void arch_irq_set_compare(void)
+static inline void arch_irq_enable(void)
 {
 	u16 compare;
 	int hz;
+
 	/*
 	 * If the interval is smaller than 1000, we use the period of the timer
 	 * as the interval, the real interval is period + handler latency.
 	 */
 	if (interval < 1000) {
-
 		period = interval;
 		hz = USEC_PER_SEC / period;
 		compare = (u16)(((u32)MFGPT_TICK_RATE + hz/2) / hz);
 	} else
 		compare = COMPARE;
-
 	outw(compare, MFGPT0_CMP2);	/* set comparator2 */
 	outw(0, MFGPT0_CNT);	/* set counter to 0 */
-}
-
-static inline void arch_irq_enable(void)
-{
 	outw(0xe310, MFGPT0_SETUP);
 }
 
@@ -189,7 +184,6 @@ static void reset_variables(void)
 static void irq_enable(void)
 {
 	local_irq_disable();
-	arch_irq_set_compare();
 	arch_irq_enable();
 	reset_variables();
 	local_irq_enable();
@@ -268,12 +262,10 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 
 	/* We can not sleep in un-thread interrupt handler for the  */
 #ifndef UNTHREAD_INTERRUPT
-	if (interval >= 1000) {
-		local_irq_enable();
-		/* Interrupt interval: the real interval should be interval + period */
-		msleep(interval / 1000);
-		local_irq_disable();
-	}
+	local_irq_enable();
+	/* Interrupt interval: the real interval should be interval + period */
+	msleep(interval / 1000);
+	local_irq_disable();
 #endif
 	/* We get a more accurate interrupt time in the arch_irq_eanble() */
 	if (enable_tracing) {
