@@ -47,7 +47,6 @@
 #define VERSION "0.1"
 
 #define USEC_PER_SEC		1000000
-#define NSEC_PER_SEC		1000000000
 
 #define SIGTEST SIGHUP
 
@@ -72,7 +71,7 @@ static int shutdown;
 static int verbose;
 static int misslimit;
 static int max_cycles;
-static volatile struct timespec after;
+static volatile struct timeval after;
 static int interval = 1000;
 
 static int kernvar(int mode, const char *name, char *value, size_t sizeofvalue)
@@ -104,9 +103,9 @@ static int kernvar(int mode, const char *name, char *value, size_t sizeofvalue)
 
 void signalhandler(int signo)
 {
-	struct timespec tv;
+	struct timeval tv;
 
-	clock_gettime(CLOCK_MONOTONIC, &tv);
+	gettimeofday(&tv, NULL);
 	after = tv;
 	if (signo == SIGINT || signo == SIGTERM)
 		shutdown = 1;
@@ -234,14 +233,6 @@ static int check_privs(void)
 	return 0;
 }
 
-static inline double calcdiff_ns(struct timespec t1, struct timespec t2)
-{
-	long long diff;
-	diff = NSEC_PER_SEC * (long long)((int) t1.tv_sec - (int) t2.tv_sec);
-	diff += ((int) t1.tv_nsec - (int) t2.tv_nsec);
-	return (double)diff;
-}
-
 int main(int argc, char *argv[])
 {
 	int path;
@@ -289,19 +280,19 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ERRROR: interrupt latency device locked\n");
 		retval = 1;
 	} else {
-		char timestamp[120];
+		char timestamp[80];
 		char sigtest[8];
 		char response_latency[8] = "4";
 		char enable_tracing[8] = "1";
 		char disable_tracing[8] = "0";
 		char interval_string[8];
-		struct timespec interrupttime, handletime, exittime, schedtime;
-		unsigned int diffno = 0, old_total, total = 0, maxmiss, diffmiss;
-		double mindiff1 = UINT_MAX, maxdiff1 = 0, diff1;
-		double mindiff2 = UINT_MAX, maxdiff2 = 0, diff2;
-		double mindiff3 = UINT_MAX, maxdiff3 = 0, diff3;
-		double mindiff4 = UINT_MAX, maxdiff4 = 0, diff4;
-		double sumdiff1 = 0.0, sumdiff2 = 0.0, sumdiff3 = 0.0, sumdiff4 = 0.0, vdiff = 0.0;
+		struct timeval interrupttime, handletime, exittime, schedtime, diff;
+		unsigned int diffno = 0, old_total, total = 0, maxmiss, diffmiss, vdiff;
+		unsigned int mindiff1 = UINT_MAX, maxdiff1 = 0, diff1;
+		unsigned int mindiff2 = UINT_MAX, maxdiff2 = 0, diff2;
+		unsigned int mindiff3 = UINT_MAX, maxdiff3 = 0, diff3;
+		unsigned int mindiff4 = UINT_MAX, maxdiff4 = 0, diff4;
+		double sumdiff1 = 0.0, sumdiff2 = 0.0, sumdiff3 = 0.0, sumdiff4 = 0;
 
 		if (tracelimit)
 			kernvar(O_WRONLY, "tracing_enabled", "1", 1);
@@ -325,12 +316,12 @@ int main(int argc, char *argv[])
 			/* blocking here until the data come */
 			read(path, timestamp, sizeof(timestamp));
 
-			clock_gettime(CLOCK_MONOTONIC, &schedtime);
+			gettimeofday(&schedtime, NULL);
 			old_total = total;
 			if (sscanf(timestamp, "%d %d,%d %d,%d %d,%d\n", &total,
-				&interrupttime.tv_sec, &interrupttime.tv_nsec,
-				&handletime.tv_sec, &handletime.tv_nsec,
-				&exittime.tv_sec, &exittime.tv_nsec) < 0)
+				&interrupttime.tv_sec, &interrupttime.tv_usec,
+				&handletime.tv_sec, &handletime.tv_usec,
+				&exittime.tv_sec, &exittime.tv_usec) < 0)
 				break;
 
 			diffno++;
@@ -347,28 +338,32 @@ int main(int argc, char *argv[])
 			if (misslimit && diffmiss >= misslimit)
 				shutdown = 1;
 
-			diff1 = calcdiff_ns(handletime, interrupttime) / 1000;
+			timersub(&handletime, &interrupttime, &diff);
+			diff1 = diff.tv_usec;
 			if (diff1 < mindiff1)
 				mindiff1 = diff1;
 			if (diff1 > maxdiff1)
 				maxdiff1 = diff1;
 			sumdiff1 += (double)diff1;
 
-			diff2 = calcdiff_ns(exittime, handletime) / 1000;
+			timersub(&exittime, &handletime, &diff);
+			diff2 = diff.tv_usec;
 			if (diff2 < mindiff2)
 				mindiff2 = diff2;
 			if (diff2 > maxdiff2)
 				maxdiff2 = diff2;
 			sumdiff2 += (double)diff2;
 
-			diff3 = calcdiff_ns(schedtime, exittime) / 1000;
+			timersub(&schedtime, &exittime, &diff);
+			diff3 = diff.tv_usec;
 			if (diff3 < mindiff3)
 				mindiff3 = diff3;
 			if (diff3 > maxdiff3)
 				maxdiff3 = diff3;
 			sumdiff3 += (double)diff3;
 
-			diff4 = calcdiff_ns(schedtime, interrupttime) / 1000;
+			timersub(&schedtime, &interrupttime, &diff);
+			diff4 = diff.tv_usec;
 			if (diff4 < mindiff4)
 				mindiff4 = diff4;
 			if (diff4 > maxdiff4)
@@ -393,8 +388,8 @@ int main(int argc, char *argv[])
 					vdiff = diff2;
 					break;
 				}
-				printf("%f\n", vdiff);
-				if ((tracelimit && vdiff > tracelimit) ||
+				printf("%d\n", vdiff);
+				if ((tracelimit && diff.tv_usec > tracelimit) ||
 					shutdown) {
 						if (tracelimit)
 							stop_tracing();
@@ -404,8 +399,7 @@ int main(int argc, char *argv[])
 			}
 
 			after.tv_sec = 0;
-			/* the tracelimit is only used to set interrupt latency */
-			if ((tracelimit && diff1 > tracelimit) ||
+			if ((tracelimit && diff.tv_usec > tracelimit) ||
 			    shutdown) {
 				if (tracelimit)
 					stop_tracing();
@@ -415,21 +409,21 @@ int main(int argc, char *argv[])
 				printf("Total events: %d\n", total);
 				printf("Missed events: Max: %8d Curr: %8d\n", maxmiss, diffmiss);
 
-				printf("Interrupt Latency:  Min %8f, Cur %8f, Avg %8f, Max %8f\n",
-				       mindiff1, diff1,
-				       (sumdiff1 / diffno) + 0.5, maxdiff1);
+				printf("Interrupt Latency:  Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				       mindiff1, (int)diff1,
+				       (int)((sumdiff1 / diffno) + 0.5), maxdiff1);
 
-				printf("Handler Latency:    Min %8f, Cur %8f, Avg %8f, Max %8f\n",
-				       mindiff2, diff2,
-				       (sumdiff2 / diffno) + 0.5, maxdiff2);
+				printf("Handler Latency:    Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				       mindiff2, (int)diff2,
+				       (int)((sumdiff2 / diffno) + 0.5), maxdiff2);
 
-				printf("Scheduler Latency:  Min %8f, Cur %8f, Avg %8f, Max %8f\n",
-				       mindiff3, diff3,
-				       (sumdiff3 / diffno) + 0.5, maxdiff3);
+				printf("Scheduler Latency:  Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				       mindiff3, (int)diff3,
+				       (int)((sumdiff3 / diffno) + 0.5), maxdiff3);
 
-				printf("Response Latency:   Min %8f, Cur %8f, Avg %8f, Max %8f\n",
-				       mindiff4, diff4,
-				       (sumdiff4 / diffno) + 0.5, maxdiff4);
+				printf("Response Latency:   Min %8d, Cur %8d, Avg %8d, Max %8d\n",
+				       mindiff4, (int)diff4,
+				       (int)((sumdiff4 / diffno) + 0.5), maxdiff4);
 
 				system("echo -n 'System Load:       '; cat /proc/loadavg");
 
