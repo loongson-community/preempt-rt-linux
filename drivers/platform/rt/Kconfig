@@ -22,7 +22,12 @@ config BACKFIRE
 config SCHED_CLOCK_LAT
 	tristate "sched_clock() Latency Driver"
 	help
-	  This is a driver for testing the duration need to call sched_clock()
+	  This is a driver for testing the latency of calling sched_clock()
+
+config SCHED_CLOCK_OVERHEAD
+	tristate "sched_clock() Overhead Driver"
+	help
+	  This is a driver for testing the duration/overhead of sched_clock()
 
 config INTR_LAT
 	tristate "Interrupt Latency Driver"
