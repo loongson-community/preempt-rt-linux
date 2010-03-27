@@ -21,7 +21,7 @@ static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
 #define SUCCESS 0
 #define FAILURE 1
 /* Dev name as it appears in /proc/devices   */
-#define DEVICE_NAME "sched_clock_latency"
+#define DEVICE_NAME "sched_clock_overhead"
 /* Max length of the message from the device */
 #define BUF_LEN 1024
 
@@ -45,7 +45,7 @@ static const struct file_operations fops = {
 /*
  * This function is called when the module is loaded
  */
-static __init int sched_clock_latency_init(void)
+static __init int sched_clock_overhead_init(void)
 {
 	Major = register_chrdev(0, DEVICE_NAME, &fops);
 
@@ -68,7 +68,7 @@ static __init int sched_clock_latency_init(void)
 /*
  * This function is called when the module is unloaded
  */
-static __exit void sched_clock_latency_exit(void)
+static __exit void sched_clock_overhead_exit(void)
 {
 	/*
 	 * Unregister the device
@@ -152,7 +152,7 @@ static void calculate_overhead(int func_no)
 		if (verbose)
 			pr_info("%d\n", overhead);
 	}
-	/* avg is the average of the latency */
+	/* avg is the average of the overhead */
 	avg = sum / loop;
 }
 
@@ -272,8 +272,8 @@ device_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 	return strlen(buff);
 }
 
-module_init(sched_clock_latency_init);
-module_exit(sched_clock_latency_exit);
+module_init(sched_clock_overhead_init);
+module_exit(sched_clock_overhead_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Wu Zhangjin <wuzhangjin@gmail.com>");
