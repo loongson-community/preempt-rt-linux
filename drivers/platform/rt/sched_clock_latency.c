@@ -18,6 +18,7 @@ static int device_release(struct inode *, struct file *);
 static ssize_t device_read(struct file *, char *, size_t, loff_t *);
 static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
 
+#define DIFF
 #define SUCCESS 0
 #define FAILURE 1
 /* Dev name as it appears in /proc/devices   */
