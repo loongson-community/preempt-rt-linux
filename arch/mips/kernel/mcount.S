@@ -6,7 +6,8 @@
  * more details.
  *
  * Copyright (C) 2009 Lemote Inc. & DSLab, Lanzhou University, China
- * Author: Wu Zhangjin <wuzj@lemote.com>
+ * Copyright (C) 2010 DSLab, Lanzhou University, China
+ * Author: Wu Zhangjin <wuzhangjin@gmail.com>
  */
 
 #include <asm/regdef.h>
@@ -45,8 +46,6 @@
 	PTR_L	a5, PT_R9(sp)
 	PTR_L	a6, PT_R10(sp)
 	PTR_L	a7, PT_R11(sp)
-#endif
-#ifdef CONFIG_64BIT
 	PTR_ADDIU	sp, PT_SIZE
 #else
 	PTR_ADDIU	sp, (PT_SIZE + 8)
@@ -71,14 +70,14 @@ _mcount:
 
 	MCOUNT_SAVE_REGS
 #ifdef KBUILD_MCOUNT_RA_ADDRESS
-	PTR_S	t0, PT_R12(sp)	/* t0 saved the location of the return address(at) by -mmcount-ra-address */
+	PTR_S	$12, PT_R12(sp)	/* save location of parent's return address */
 #endif
 
-	move	a0, ra		/* arg1: next ip, selfaddr */
+	move	a0, ra		/* arg1: self return address */
 	.globl ftrace_call
 ftrace_call:
 	nop	/* a placeholder for the call to a real tracing function */
-	 move	a1, AT		/* arg2: the caller's next ip, parent */
+	 move	a1, AT		/* arg2: parent's return address */
 
 #ifdef CONFIG_FUNCTION_GRAPH_TRACER
 	.globl ftrace_graph_call
@@ -119,9 +118,9 @@ NESTED(_mcount, PT_SIZE, ra)
 static_trace:
 	MCOUNT_SAVE_REGS
 
-	move	a0, ra		/* arg1: next ip, selfaddr */
+	move	a0, ra		/* arg1: self return address */
 	jalr	t2		/* (1) call *ftrace_trace_function */
-	 move	a1, AT		/* arg2: the caller's next ip, parent */
+	 move	a1, AT		/* arg2: parent's return address */
 
 	MCOUNT_RESTORE_REGS
 	.globl ftrace_stub
@@ -134,28 +133,36 @@ ftrace_stub:
 #ifdef CONFIG_FUNCTION_GRAPH_TRACER
 
 NESTED(ftrace_graph_caller, PT_SIZE, ra)
-#ifdef CONFIG_DYNAMIC_FTRACE
-	PTR_L	a1, PT_R31(sp)	/* load the original ra from the stack */
-#ifdef KBUILD_MCOUNT_RA_ADDRESS
-	PTR_L	t0, PT_R12(sp)	/* load the original t0 from the stack */
-#endif
-#else
+#ifndef CONFIG_DYNAMIC_FTRACE
 	MCOUNT_SAVE_REGS
-	move	a1, ra		/* arg2: next ip, selfaddr */
 #endif
 
+	/* arg1: Get the location of the parent's return address */
 #ifdef KBUILD_MCOUNT_RA_ADDRESS
-	bnez	t0, 1f		/* non-leaf func: t0 saved the location of the return address */
-	 nop
-	PTR_LA	t0, PT_R1(sp)	/* leaf func: get the location of at(old ra) from our own stack */
-1:	move	a0, t0		/* arg1: the location of the return address */
+#ifdef CONFIG_DYNAMIC_FTRACE
+	PTR_L	a0, PT_R12(sp)
 #else
-	PTR_LA	a0, PT_R1(sp)	/* arg1: &AT -> a0 */
+	move	a0, $12
 #endif
-	jal	prepare_ftrace_return
-#ifdef CONFIG_FRAME_POINTER
-	 move	a2, fp		/* arg3: frame pointer */
+	bnez	a0, 1f		/* arg1: non-leaf func: stored in $12 */
+	 nop
+#endif
+	PTR_LA	a0, PT_R1(sp)	/* leaf func: the location in current stack */
+
+1:
+	/* arg2: Get self return address */
+#ifdef CONFIG_DYNAMIC_FTRACE
+	PTR_L	a1, PT_R31(sp)
 #else
+	move	a1, ra
+#endif
+
+	jal	prepare_ftrace_return
+
+	/* arg3: Get frame pointer of current stack */
+#ifdef CONFIG_FRAME_POINTER
+	 move	a2, fp
+#else /* ! CONFIG_FRAME_POINTER */
 #ifdef CONFIG_64BIT
 	 PTR_LA	a2, PT_SIZE(sp)
 #else
