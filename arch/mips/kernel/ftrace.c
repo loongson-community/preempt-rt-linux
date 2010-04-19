@@ -34,7 +34,7 @@
 /* After linking, the following instructions are fixed. */
 static unsigned int insn_jal_ftrace_caller __read_mostly;
 static unsigned int insn_lui_v1_hi16_mcount __read_mostly;
-static unsigned int insn_j_ftrace_graph_caller __maybe_unused __read_mostly;
+static unsigned int insn_j_ftrace_graph_caller __read_mostly;
 
 /* The following instructions are encoded in the run-time */
 /* insn: jal func; op_code|addr : 31...26|25 ....0 */
@@ -55,11 +55,9 @@ static inline void ftrace_dyn_arch_init_insns(void)
 	buf = (u32 *)&insn_jal_ftrace_caller;
 	uasm_i_jal(&buf, (FTRACE_ADDR + 8));
 
-#ifdef CONFIG_FUNCTION_GRAPH_TRACER
 	/* j ftrace_graph_caller */
 	buf = (u32 *)&insn_j_ftrace_graph_caller;
 	uasm_i_j(&buf, (unsigned long)ftrace_graph_caller);
-#endif
 }
 
 static int ftrace_modify_code(unsigned long ip, unsigned int new_code)
@@ -182,6 +180,7 @@ int __init ftrace_dyn_arch_init(void *data)
 #ifdef CONFIG_FUNCTION_GRAPH_TRACER
 
 #ifdef CONFIG_DYNAMIC_FTRACE
+
 extern void ftrace_graph_call(void);
 #define FTRACE_GRAPH_CALL_IP	((unsigned long)(&ftrace_graph_call))
 
@@ -195,6 +194,7 @@ int ftrace_disable_ftrace_graph_caller(void)
 {
 	return ftrace_modify_code(FTRACE_GRAPH_CALL_IP, INSN_NOP);
 }
+
 #endif	/* !CONFIG_DYNAMIC_FTRACE */
 
 #ifndef KBUILD_MCOUNT_RA_ADDRESS
@@ -249,7 +249,8 @@ unsigned long ftrace_get_parent_addr(unsigned long self_addr,
 		return sp;
 	return 0;
 }
-#endif	/* !KBUILD_MCOUNT_RA_ADDRESS */
+
+#endif
 
 /*
  * Hook the return address and push it in the stack of return addrs
