@@ -1,0 +1,46 @@
+ReadMe of preempt-rt benchmarking tools
+
+0. intruduction
+
+This is the tool for benchmarking preempt-rt on loongson.
+
+./rt-tests -- from http://rt.wiki.kernel.org but with some modifcation
+
+./more	-- more tools written by falcon <wuzhangjin@gmail.com>
+	interrupt_latency/ -- test the interrupt and schedule latency with the help of the interrupt_latency.ko module(INTR_LAT=m)
+   	rtclock -- test	the accuracy of clock_gettime and gettimeofday
+	rtcontex-switch -- test the latency of context swith
+	rtmq -- test the latency of message queue
+	rtsignal -- test the latency of kill->sigsuspend and sigqueue->sigwaitinfo
+	rtprio -- build 4 different processes with different priorities
+
+./schedtool-deadline -- tool for changing the scheduling policy of SCHED_DEADLINE
+
+./test-deadline -- tool for testing the scheduling policy of SCHED_DEADLINE
+
+./analyze-sched -- tool for converting the tracing result of sched_switch
+		   tracer of Tracer to a vcd format result, the vcd format result can be read by
+		   gtkwave.
+
+2. scripts/
+
+load.sh -- add tools automatically(please ensure installed the hackbench to /usr/bin)
+auto_test.sh -- do benchmarking automatically without load (please set the path of the interrupt_latency.ko)
+auto_test_100load.sh  -- do benchmarking with the load.sh, (please run load.sh in another terminal and set the path of the interrupt_latency.ko)
+gram-sample.sh -- tool for converting the samples to a picture with the help of gnuplot
+
+Usage:
+
+// test without load
+$ ./auto_test.sh
+
+// test with load
+in one terminal
+$ ./load.sh
+in another terminal
+$ ./auto_test_100load.sh
+
+// draw the picture from the testing result
+$ ./graph-samples.sh -i samples.result -t "Title"
+// only get the gnuplot script
+$ ./graph-samples.sh -i samples.result -t "Title" -S
