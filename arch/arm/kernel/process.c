@@ -175,7 +175,9 @@ void cpu_idle(void)
 		leds_event(led_idle_end);
 		tick_nohz_restart_sched_tick();
 		local_irq_disable();
+		__preempt_enable_no_resched();
 		__schedule();
+		preempt_disable();
 		local_irq_enable();
 	}
 }

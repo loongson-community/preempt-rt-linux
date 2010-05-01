@@ -295,7 +295,6 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
 	/*
 	 * OK, it's off to the idle thread for us
 	 */
-	preempt_enable();
 	cpu_idle();
 }
 

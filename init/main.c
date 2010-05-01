@@ -428,8 +428,9 @@ static noinline void __init_refok rest_init(void)
 	 */
 	init_idle_bootup_task(current);
 	preempt_enable_and_schedule();
+	preempt_disable();
 
-	/* There is no reason for calling it with preempt disabled */
+	/* Call into cpu_idle with preempt disabled */
 	cpu_idle();
 }
 

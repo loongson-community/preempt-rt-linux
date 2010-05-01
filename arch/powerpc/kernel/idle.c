@@ -97,7 +97,9 @@ void cpu_idle(void)
 		if (cpu_should_die())
 			cpu_die();
 		local_irq_disable();
+		__preempt_enable_no_resched();
 		__schedule();
+		preempt_disable();
 		local_irq_enable();
 	}
 }

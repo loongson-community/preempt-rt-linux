@@ -125,7 +125,6 @@ asmlinkage __cpuinit void start_secondary(void)
 
 	synchronise_count_slave();
 
-	preempt_enable();
 	cpu_idle();
 }
 

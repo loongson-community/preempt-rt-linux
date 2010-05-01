@@ -543,7 +543,6 @@ int __devinit start_secondary(void *unused)
 
 	local_irq_enable();
 
-	preempt_enable();
 	cpu_idle();
 	return 0;
 }
