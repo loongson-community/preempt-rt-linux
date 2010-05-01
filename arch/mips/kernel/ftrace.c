@@ -15,7 +15,7 @@
 #include <asm/cacheflush.h>
 #include <asm/asm.h>
 #include <asm/asm-offsets.h>
-#include <../mm/uasm.h>
+#include <asm/uasm.h>
 
 #define INSN_S_R_SP	0xafb00000	/* s{d,w} R, offset(sp) */
 

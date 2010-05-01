@@ -18,7 +18,7 @@
 #include <linux/unistd.h>
 
 #include <asm/vdso.h>
-#include "../mm/uasm.h"
+#include <asm/uasm.h>
 
 /*
  * Including <asm/unistd.h> would give use the 64-bit syscall numbers ...

@@ -123,19 +123,19 @@
 		.macro	get_saved_sp	/* Uniprocessor variation */
 #ifdef CONFIG_CPU_LOONGSON2F
 		/*
-		 * Clear BTB(branch target buffer), forbid RAS(row address
-		 * strobe) to workaround the Out-of-oder Issue in Loongson2F
-		 * via it's diagnostic register.
+		 * Clear BTB (branch target buffer), forbid RAS (return address
+		 * stack) to workaround the Out-of-order Issue in Loongson2F
+		 * via its diagnostic register.
 		 */
-		move k0, ra
+		move	k0, ra
 		jal	1f
-		nop
+		 nop
 1:		jal	1f
-		nop
+		 nop
 1:		jal	1f
-		nop
+		 nop
 1:		jal	1f
-		nop
+		 nop
 1:		move	ra, k0
 		li	k0, 3
 		mtc0	k0, $22
