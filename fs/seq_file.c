@@ -6,6 +6,7 @@
  */
 
 #include <linux/fs.h>
+#include <linux/mount.h>
 #include <linux/module.h>
 #include <linux/seq_file.h>
 #include <linux/slab.h>
@@ -458,13 +459,16 @@ int seq_path_root(struct seq_file *m, struct path *path, struct path *root,
 	char *buf;
 	size_t size = seq_get_buf(m, &buf);
 	int res = -ENAMETOOLONG;
+	int cpu = get_cpu();
+	put_cpu();
 
 	if (size) {
 		char *p;
 
-		spin_lock(&dcache_lock);
+		vfsmount_read_lock(cpu);
 		p = __d_path(path, root, buf, size);
-		spin_unlock(&dcache_lock);
+		vfsmount_read_unlock(cpu);
+
 		res = PTR_ERR(p);
 		if (!IS_ERR(p)) {
 			char *end = mangle_path(buf, p, esc);
