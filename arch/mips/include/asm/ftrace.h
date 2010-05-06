@@ -3,7 +3,7 @@
  * License.  See the file "COPYING" in the main directory of this archive for
  * more details.
  *
- * Copyright (C) 2009 DSLab, Lanzhou University, China
+ * Copyright (C) 2009, 2010 DSLab, Lanzhou University, China
  * Author: Wu Zhangjin <wuzhangjin@gmail.com>
  */
 
@@ -18,6 +18,19 @@
 #ifndef __ASSEMBLY__
 extern void _mcount(void);
 #define mcount _mcount
+
+/*
+ * If the Instruction Pointer is in module space (0xc0000000), return true;
+ * otherwise, it is in kernel space (0x80000000), return false.
+ *
+ * FIXME: This may not work when the kernel is compiled with -msym32 for it
+ * will make the current implementation of Ftrace for MIPS not work since we
+ * have assumed the module space and kernel space are not the same in
+ * scripts/recordmcount.pl and in the other related places. before the support
+ * of -msym32 is added, we just force the kernel compiled without -msym32 in
+ * arch/mips/Makefile.
+ */
+#define in_module(ip) (unlikely((ip) & 0x40000000))
 
 #define safe_load(load, src, dst, error)		\
 do {							\

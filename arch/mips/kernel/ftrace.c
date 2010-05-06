@@ -52,7 +52,7 @@ int ftrace_make_nop(struct module *mod,
 
 	/* We have compiled module with -mlong-calls, but compiled the kernel
 	 * without it, we need to cope with them respectively. */
-	if (ip & 0x40000000) {
+	if (in_module(ip)) {
 		/* record it for ftrace_make_call */
 		if (lui_v1 == 0) {
 			/* lui_v1 = *(unsigned int *)ip; */
@@ -100,7 +100,7 @@ int ftrace_make_call(struct dyn_ftrace *rec, unsigned long addr)
 		ftrace_modify_code(addr, ftrace_nop);
 	}
 	/* ip, module: 0xc0000000, kernel: 0x80000000 */
-	new = (ip & 0x40000000) ? lui_v1 : jal_mcount;
+	new = in_module(ip) ? lui_v1 : jal_mcount;
 
 	return ftrace_modify_code(ip, new);
 }
@@ -162,14 +162,12 @@ unsigned long ftrace_get_parent_addr(unsigned long self_addr,
 	unsigned int code;
 	int faulted;
 
-	/* in module or kernel? */
-	if (self_addr & 0x40000000) {
-		/* module: move to the instruction "lui v1, HI_16BIT_OF_MCOUNT" */
-		ip = self_addr - 20;
-	} else {
-		/* kernel: move to the instruction "move ra, at" */
-		ip = self_addr - 12;
-	}
+	/*
+	 * For module, move the ip from calling site of mcount to the
+	 * instruction "lui v1, hi_16bit_of_mcount"(offset is 20), but for
+	 * kernel, move to the instruction "move ra, at"(offset is 12)
+	 */
+	ip = self_addr - (in_module(self_addr) ? 20 : 12);
 
 	/* search the text until finding the non-store instruction or "s{d,w}
 	 * ra, offset(sp)" instruction */
