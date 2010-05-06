@@ -79,7 +79,8 @@ void mach_irq_dispatch(unsigned int pending)
 	if (pending & CAUSEF_IP7)
 		do_IRQ(LOONGSON_TIMER_IRQ);
 	else if (pending & CAUSEF_IP6) {	/* North Bridge, Perf counter */
-#ifdef CONFIG_OPROFILE
+#if defined(CONFIG_OPROFILE) || defined(CONFIG_OPROFILE_MODULE) \
+		|| defined(CONFIG_HW_PERF_EVENTS)
 		do_IRQ(LOONGSON2_PERFCNT_IRQ);
 #endif
 		bonito_irqdispatch();

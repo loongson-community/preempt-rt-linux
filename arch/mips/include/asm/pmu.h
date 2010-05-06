@@ -19,6 +19,8 @@
 #ifndef __MIPS_PMU_H__
 #define __MIPS_PMU_H__
 
+static int (*save_perf_irq)(void);
+
 #if defined(CONFIG_CPU_MIPS32) || defined(CONFIG_CPU_MIPS64) || \
     defined(CONFIG_CPU_R10000) || defined(CONFIG_CPU_SB1)
 
@@ -40,8 +42,6 @@
 #define M_PERFCTL_MORE			(1UL      << 31)
 
 #define M_COUNTER_OVERFLOW		(1UL      << 31)
-
-static int (*save_perf_irq)(void);
 
 #ifdef CONFIG_MIPS_MT_SMP
 static int cpu_has_mipsmt_pertccounters;
@@ -215,6 +215,10 @@ static void reset_counters(void *arg)
 extern unsigned int rm9000_perfcount_irq;
 
 #elif defined(CONFIG_CPU_LOONGSON2)
+
+#include <loongson.h>
+
+#define MIPS_MAX_HWEVENTS	2
 
 #define LOONGSON2_CPU_TYPE	"mips/loongson2"
 

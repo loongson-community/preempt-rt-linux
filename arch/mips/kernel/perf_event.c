@@ -507,6 +507,7 @@ handle_associated_event(struct cpu_hw_events *cpuc,
 }
 
 #include "perf_event_mipsxx.c"
+#include "perf_event_loongson2.c"
 
 /*
  * Callchain handling code.
