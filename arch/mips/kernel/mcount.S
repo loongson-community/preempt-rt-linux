@@ -69,7 +69,7 @@ _mcount:
 
 	MCOUNT_SAVE_REGS
 #ifdef KBUILD_MCOUNT_RA_ADDRESS
-	PTR_S	t0, PT_R12(sp)	/* t0 saved the location of the return address(at) by -mmcount-ra-address */
+	PTR_S	$12, PT_R12(sp)	/* $12 saved the location of the return address(at) by -mmcount-ra-address */
 #endif
 
 	move	a0, ra		/* arg1: next ip, selfaddr */
@@ -135,7 +135,7 @@ NESTED(ftrace_graph_caller, PT_SIZE, ra)
 #ifdef CONFIG_DYNAMIC_FTRACE
 	PTR_L	a1, PT_R31(sp)	/* load the original ra from the stack */
 #ifdef KBUILD_MCOUNT_RA_ADDRESS
-	PTR_L	t0, PT_R12(sp)	/* load the original t0 from the stack */
+	PTR_L	$12, PT_R12(sp)	/* load the original $12 from the stack */
 #endif
 #else
 	MCOUNT_SAVE_REGS
@@ -143,10 +143,10 @@ NESTED(ftrace_graph_caller, PT_SIZE, ra)
 #endif
 
 #ifdef KBUILD_MCOUNT_RA_ADDRESS
-	bnez	t0, 1f		/* non-leaf func: t0 saved the location of the return address */
+	bnez	$12, 1f		/* non-leaf func: $12 saved the location of the return address */
 	 nop
-	PTR_LA	t0, PT_R1(sp)	/* leaf func: get the location of at(old ra) from our own stack */
-1:	move	a0, t0		/* arg1: the location of the return address */
+	PTR_LA	$12, PT_R1(sp)	/* leaf func: get the location of at(old ra) from our own stack */
+1:	move	a0, $12		/* arg1: the location of the return address */
 #else
 	PTR_LA	a0, PT_R1(sp)	/* arg1: &AT -> a0 */
 #endif
