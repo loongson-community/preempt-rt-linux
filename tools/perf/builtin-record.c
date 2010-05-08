@@ -562,7 +562,7 @@ static int __cmd_record(int argc, const char **argv)
 	post_processing_offset = lseek(output, 0, SEEK_CUR);
 
 	err = event__synthesize_kernel_mmap(process_synthesized_event,
-					    session, "_text");
+					    session, "_stext");
 	if (err < 0) {
 		pr_err("Couldn't record kernel reference relocation symbol.\n");
 		return err;
