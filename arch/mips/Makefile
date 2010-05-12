@@ -50,9 +50,6 @@ endif
 
 ifndef CONFIG_FUNCTION_TRACER
 cflags-y := -ffunction-sections
-else
-# force the kernel compiled without -msym32 to ensure the current ftrace for MIPS works.
-KBUILD_SYM32 := no
 endif
 ifdef CONFIG_FUNCTION_GRAPH_TRACER
   ifndef KBUILD_MCOUNT_RA_ADDRESS

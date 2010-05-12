@@ -23,12 +23,7 @@ extern void _mcount(void);
  * If the Instruction Pointer is in module space (0xc0000000), return true;
  * otherwise, it is in kernel space (0x80000000), return false.
  *
- * FIXME: This may not work when the kernel is compiled with -msym32 for it
- * will make the current implementation of Ftrace for MIPS not work since we
- * have assumed the module space and kernel space are not the same in
- * scripts/recordmcount.pl and in the other related places. before the support
- * of -msym32 is added, we just force the kernel compiled without -msym32 in
- * arch/mips/Makefile.
+ * FIXME: This may not work when the kernel is compiled with -msym32.
  */
 #define in_module(ip) (unlikely((ip) & 0x40000000))
 
