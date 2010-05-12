@@ -19,7 +19,7 @@
 #ifndef __MIPS_PMU_H__
 #define __MIPS_PMU_H__
 
-static int (*save_perf_irq)(void);
+static int (*save_perf_irq)(void) __maybe_unused;
 
 #if defined(CONFIG_CPU_MIPS32) || defined(CONFIG_CPU_MIPS64) || \
     defined(CONFIG_CPU_R10000) || defined(CONFIG_CPU_SB1)
