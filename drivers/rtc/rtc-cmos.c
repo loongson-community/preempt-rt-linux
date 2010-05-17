@@ -751,7 +751,7 @@ cmos_do_probe(struct device *dev, struct resource *ports, int rtc_irq)
 	 * <asm-generic/rtc.h> doesn't know 12-hour mode either.
 	 */
        if (is_valid_irq(rtc_irq) && !(rtc_control & RTC_24H)) {
-		dev_warn(dev, "only 24-hr supported\n")
+		dev_warn(dev, "only 24-hr supported\n");
 		retval = -ENXIO;
 		goto cleanup1;
 	}
