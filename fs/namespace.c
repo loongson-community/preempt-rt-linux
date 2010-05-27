@@ -752,9 +752,10 @@ void mntput_no_expire(struct vfsmount *mnt)
 {
 	int cpu = get_cpu();
 	put_cpu();
+repeat:
 	if (likely(mnt->mnt_flags & MNT_MOUNTED)) {
 		vfsmount_read_lock(cpu);
-		if (unlikely(!mnt->mnt_flags & MNT_MOUNTED)) {
+		if (unlikely(!(mnt->mnt_flags & MNT_MOUNTED))) {
 			vfsmount_read_unlock(cpu);
 			goto repeat;
 		}
@@ -766,9 +767,11 @@ void mntput_no_expire(struct vfsmount *mnt)
 		return;
 	}
 
-repeat:
 	vfsmount_write_lock();
-	BUG_ON(mnt->mnt_flags & MNT_MOUNTED);
+	if (unlikely((mnt->mnt_flags & MNT_MOUNTED))) {
+		vfsmount_write_unlock();
+		goto repeat;
+	}
 	preempt_disable();
 	dec_mnt_count(mnt);
 	preempt_enable();
@@ -781,7 +784,9 @@ repeat:
 		__mntput(mnt);
 		return;
 	}
+	preempt_disable();
 	add_mnt_count(mnt, mnt->mnt_pinned + 1);
+	preempt_enable();
 	mnt->mnt_pinned = 0;
 	vfsmount_write_unlock();
 	acct_auto_close_mnt(mnt);
@@ -825,7 +830,7 @@ void mnt_unpin(struct vfsmount *mnt)
 	vfsmount_write_lock();
 	if (mnt->mnt_pinned) {
 		preempt_disable();
-		dec_mnt_count(mnt);
+		inc_mnt_count(mnt);
 		preempt_enable();
 		mnt->mnt_pinned--;
 	}
@@ -1670,9 +1675,13 @@ static int do_loopback(struct path *path, char *old_name,
 		goto out;
 
 	err = -ENOMEM;
-	if (recurse)
+	if (recurse) {
 		mnt = copy_tree(old_path.mnt, old_path.dentry, 0);
-	else
+		/* Annoying. Since we graft the rootfs, we need to unmark
+		 * it as mounted. */
+		WARN_ON(!(mnt->mnt_flags & MNT_MOUNTED));
+		mnt->mnt_flags &= ~MNT_MOUNTED;
+	} else
 		mnt = clone_mnt(old_path.mnt, old_path.dentry, 0);
 
 	if (!mnt)
