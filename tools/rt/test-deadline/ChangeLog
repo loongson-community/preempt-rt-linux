@@ -1,0 +1,119 @@
+commit 1f1b2eefc3bf8ddd71918a69dcbc50e8a751cc57
+Author: Raistlin <raistlin@linux.it>
+Date:   Thu Oct 15 12:04:07 2009 +0200
+
+    New alignement with the newest API.
+
+commit a1194473cc2119d40c51f8b3d3781dcdf28c8a32
+Author: Raistlin <raistlin@linux.it>
+Date:   Mon Oct 12 13:16:53 2009 +0200
+
+    Added affinity specification in the test file.
+    
+    Added the logic for read the CPU-affinity of each task from the test file.
+
+commit 6f2d9902bbc0ec227778579af4aa0d1622ccb309
+Author: Raistlin <raistlin@linux.it>
+Date:   Mon Oct 12 13:15:51 2009 +0200
+
+    Added 1 task testcase.
+    
+    Added test file for only 1 task with 10000/100000 runtime/deadline.
+
+commit 86ae4b47c2927cee7de6169158718d4c46b776d3
+Author: root <root@Palantir.(none)>
+Date:   Mon Oct 12 08:51:43 2009 +0200
+
+    Removed signal handling.
+    
+    The 'signal' field in thread parameters was unused, thus it is being removed.
+
+commit 6fed90cfd293066cda4516ec176d7f795df2479c
+Author: Raistlin <raistlin@linux.it>
+Date:   Mon Oct 12 08:48:07 2009 +0200
+
+    Tests runnable as normal user.
+    
+    Removed the (not needed!) check that the test is being run by the superuser.
+
+commit 70864a32659a31e30e77305c26e8c53555ec14df
+Author: root <root@Palantir.(none)>
+Date:   Mon Oct 12 08:38:30 2009 +0200
+
+    Modified testcase.
+    
+    Testcase configuration file modified to reflect more common scenario.
+
+commit 77fd0c2bfbb2f9babf975626593cba27a0d86e25
+Author: root <root@debian.(none)>
+Date:   Fri Oct 9 16:22:40 2009 +0200
+
+    Aligned with the last API.
+    
+    Support for the nes sched_param_ex, with period and flags field added.
+
+commit 0f27e7e4f3f13d7f83313f08a435cb0db7ccebf6
+Author: root <root@debian.(none)>
+Date:   Wed Aug 12 13:08:20 2009 +0200
+
+    Log the starting of the tasks on stderr.
+    
+    Print the starting log string of the tasks on standard error,
+    so to make it visible even when stdout is made quiet.
+
+commit fd75f3721f90a94336fa1b18f58cfae8223157c8
+Author: Dario Faggioli <faggioli@gandalf.sssup.it>
+Date:   Mon Aug 10 20:23:44 2009 +0200
+
+    Adapatation needed for development branch
+    
+    The tool is further modified to mach with the current development
+    branch of SCHED_EDF (the one in sched-devel-edf of the sched-edf.git repo).
+
+commit 152a80773861d7a091a18656d50d602f9bcba059
+Author: Dario Faggioli <faggioli@gandalf.sssup.it>
+Date:   Mon Aug 10 19:35:22 2009 +0200
+
+    Update and bugfix for the Makefile
+    
+    The Makefile is patched in order to:
+     - compile the new hog test program
+     - include dependencies for the targets
+     - add an 'all' target to compile both tests
+
+commit a8ac78806a1304317d0972a1d44dfd5b7ca57efc
+Author: Dario Faggioli <faggioli@gandalf.sssup.it>
+Date:   Mon Aug 10 19:33:17 2009 +0200
+
+    CPU-hog test added
+    
+    A simple test program is added designed such that each of its
+    threads consumes all the CPU bandwidth it is assigned.
+    
+    This is of help while testing the isolation/bandwidth enforcement
+    the scheduling algorithm is able to provide.
+
+commit 2f7e75426fdd6c542904a6d8658ae9afa575757a
+Author: michael <michael@panicking.kicks-ass.org>
+Date:   Mon Jun 29 15:37:16 2009 +0200
+
+    Use the new sched_param2 instead of the old struct.
+    
+    Signed-off-by: Michael Trimarchi <michael@evidence.eu.com>
+
+commit 1ae52d196bbb9486e33b06c0ddc3c9affd252bdd
+Author: michael <michael@panicking.kicks-ass.org>
+Date:   Mon Jun 29 10:52:45 2009 +0200
+
+    Add the sched-yield to report to the scheduler that the current
+    instance is terminated. Remove binary periodic in git repository
+    
+    Signed-off-by: Michael Trimarchi <michael@evidence.eu.com>
+
+commit 2dd1fda08ef0541e767dc5f2a62ed41bf4103aa2
+Author: root <root@panicking.kicks-ass.org>
+Date:   Mon Jun 29 10:14:20 2009 +0200
+
+    Add edf test suite for edf scheduler
+    
+    Signed-off-by: Michael Trimarchi <michael@evidence.eu.com>

@@ -1,0 +1,23 @@
+commit db71174018d3a233bcc07352ad410c37fcdcf443
+Author: Dario Faggioli <faggioli@gandalf.sssup.it>
+Date:   Wed Jul 1 19:51:42 2009 +0100
+
+    Improved README.
+    
+    OSADL page about 'Linux wave' added to the README.
+
+commit 39f549d57cb891577d828773096731d54f5106a3
+Author: michael <michael@panicking.kicks-ass.org>
+Date:   Mon Jun 29 10:45:10 2009 +0200
+
+    Add the howto to use with gtkwave
+    
+    Signed-off-by: Trimarchi Michael <michael@evidence.eu.com>
+
+commit b5d2a843b8820ec4954c802d20c9268c989481c3
+Author: root <root@panicking.kicks-ass.org>
+Date:   Mon Jun 29 10:16:14 2009 +0200
+
+    Add analyze tool for sched edf.
+    
+    Signed-off-by: Michael Trimarchi <michael@evidence.eu.com>

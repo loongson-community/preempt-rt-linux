@@ -1,0 +1,223 @@
+%{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+
+Summary: Programs that test various rt-features
+Name: rt-tests
+Version: __VERSION__
+Release: 1%{?dist}
+License: GPLv2
+Group: Development/Tools
+URL: git://git.kernel.org/pub/scm/linux/kernel/git/tglx/rt-tests.git
+Source0: %{name}-%{version}.tar.gz
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+Obsoletes: cyclictest signaltest pi_tests
+BuildRequires: numactl-devel
+
+%description
+rt-tests is a set of programs that test and measure various components of
+real-time kernel behavior. This package measures timer, signal, and hardware
+latency. It also tests the functioning of priority-inheritance mutexes. 
+
+%prep
+%setup -qn rt-tests
+
+%build
+make NUMA=1
+
+%install
+rm -rf $RPM_BUILD_ROOT
+mkdir -p $RPM_BUILD_ROOT
+mkdir -p $RPM_BUILD_ROOT/%{python_sitelib}
+make DESTDIR=$RPM_BUILD_ROOT prefix=/usr install
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-,root,root,-)
+%{python_sitelib}/hwlatdetect.py*
+/usr/bin/cyclictest
+/usr/bin/pi_stress
+/usr/bin/signaltest
+/usr/bin/hwlatdetect
+/usr/bin/rt-migrate-test
+/usr/bin/pip_stress
+/usr/bin/ptsematest
+/usr/bin/sendme
+/usr/bin/sigwaittest
+/usr/bin/svsematest
+/usr/bin/hackbench
+/usr/src/backfire/backfire.c
+%doc
+/usr/share/man/man8/cyclictest.8.gz
+/usr/share/man/man8/pi_stress.8.gz
+/usr/share/man/man8/hwlatdetect.8.gz
+/usr/share/man/man4/backfire.4.gz
+/usr/share/man/man8/ptsematest.8.gz
+/usr/share/man/man8/sendme.8.gz
+/usr/share/man/man8/sigwaittest.8.gz
+/usr/share/man/man8/svsematest.8.gz
+/usr/share/man/man8/hackbench.8.gz
+
+%changelog
+* Fri Mar 19 2010 Clark Williams <williams@redhat.com> - 0.68-1
+- fix tracing difference between 2.6.24 and 2.6.33
+
+* Tue Mar 16 2010 Clark Williams <williams@redhat.com> - 0.67-1
+- modified specfile to add hackbench
+- modified internal ftrace logic for correct tracing
+- Changed rpm %description field to be more descriptive (BZ# 572323)
+- from Carsten Emde <c.emde@osadl.org>
+  - added smp option to svsematest
+  - fixed policy display in cyclictest
+- from John Kacur <jkacur@redhat.com>
+  - changed default scheduling policy to SCHED_FIFO
+  - fixed spelling mistake on cyclictest man page
+  - use symbolic names for scheduling policy
+  - reverted commit 582be2a52c43801a10d318de7491f1cc7243d5cf to 
+    deal with bug in priority distribution
+- from Uwe Kleine-König <u.kleine-koenig@pengutronix.de>
+  - renamed pip to pip_stress
+  - eliminated use of temp files in dependency generation
+  - install backfire.c module source in /usr/src/backfire
+- from David Sommerseth <davids@redhat.com>
+  - added new-and-improved hackbench to rt-tests
+
+* Mon Feb 15 2010 Clark Williams <williams@redhat.com> - 0.66-1
+- fix incorrect usage of sched_setscheduler in check_privs()
+
+* Mon Feb  8 2010 Clark Williams <williams@redhat.com> - 0.65-1
+- add workaround to hwlatdetect for incorrect initializer in
+  smi_detector.ko
+
+* Fri Jan 29 2010 Clark Williams <williams@redhat.com> - 0.64-1
+- from John Kacur <jkacur@redhat.com>
+  - automatic dependency generation
+  - style cleanups
+  - libnuma code cleanups
+  - add copyright to rt_numa.h
+
+* Wed Jan 27 2010 Clark Williams <williams@redhat.com> - 0.63-1
+- added support for libnuma V1 API
+
+* Tue Jan 26 2010 Clark Williams <williams@redhat.com> - 0.62-1
+- added NUMA option
+- patch from Uwe Kleine-König <u.kleine-koenig@pengutronix.de> 
+  to clarify source copyrights
+- moved hwlatdetect to python site-library
+
+* Wed Jan 13 2010 Clark Williams <williams@redhat.com> - 0.61-1
+- added --smp/-S option to setup for basic SMP testing
+- added warn() and fatal() utility functions
+
+* Tue Dec 29 2009 Clark Williams <williams@redhat.com> - 0.60-1
+- John Kacur <jkacur@redhat.com>:
+  - added pip test (process based priority inheritance)
+  - refactored some error routines into the common library
+  - added 'make tags' option to Makefile
+- Michael Olbrich <m.olbrich@pengutronix.de> added an unbuffered
+  output option to cyclictest (-u/--unbuffered)
+
+* Mon Dec 21 2009 Clark Williams <williams@redhat.com> - 0.59-1
+- deleted classic_pi
+- David Sommerseth <davids@redhat.com>:
+  - added help text for -M (refresh-on-max) option for cyclictest
+  - fixed parsing of --mlockall in signaltest
+- Carsten Emde <C.Emde@osadl.org> provided a better explaination 
+  for using the kernel module with the backfire program
+- John Kacur <jkacur@redhat.com> cleaned up the trailing comments
+  on the guard macros in src/lib/rt-utils.h
+
+* Mon Dec 21 2009 Clark Williams <williams@redhat.com> - 0.58-1
+- merged jkacur's portable getcpu() code
+- fixed inadvertent conversion of some source to DOS text files
+
+* Mon Dec 14 2009 Clark Williams <williams@redhat.com> - 0.57-1
+- John Kacur <jkacur@redhat.com> folded in Carsten Emde's tests
+    - ptsematest
+    - sigwaittest
+    - svsematest
+    - sendme
+- Carsten Emde <carsten.emde@osadl.org> created a utility library
+  moving functions from cyclictest into src/lib/rt-utils.c
+- Makefile cleanups from jkacur
+
+* Thu Dec 10 2009 Clark Williams <williams@redhat.com> - 0.56-1
+- cyclictest: added code to print break thread id with -b
+
+* Thu Nov 19 2009 Clark Williams <williams@redhat.com> - 0.55-1
+- pi_stress: cosmetic newline added
+- fixes from John Kacur <jkacur@redhat.com>
+  - pi_stress: Remove racy state variables that cause watchdog to trigger
+  - pi_stress: Check whether quiet is set, before taking shutdown_mtx
+  - pi_stress: Use a pthread_mutex_t for the global variable shutdown
+
+* Tue Nov 17 2009 Clark Williams <williams@redhat.com> - 0.54-1
+- patches from John Kacur <jkacur@redhat.com>
+  - fix source style issues in pi_stress
+  - add a DEBUG option to the Makefile
+  - use CFLAGS for C compiler options
+  - label targets as PHONY if not generating actual file
+- patch to remove rt-tests.spec from .PHONY in Makefile
+
+* Mon Nov 16 2009 Clark Williams <williams@redhat.com> - 0.53-2
+- added back missing dist tag for release
+
+* Tue Oct  6 2009 Clark Williams <williams@redhat.com> - 0.53-1
+- fixed incorrect format string in hwlatdetect.py
+- added docs/release-checklist.txt
+
+* Mon Sep 21 2009 Clark Williams <williams@redhat.com> - 0.52-1
+- fixes and cleanups to pi_stress from jkacur
+- added rostedt's rt-migrate-test
+
+* Thu Sep  3 2009 Clark Williams <williams@redhat.com> - 0.51-1
+- two manpage fixes from Uwe Kleine-König <u.kleine-koenig@pengutronix.de>
+- added -M option from Arnaldo Carvahlo de Melo <acme@redhat.com> 
+  (for use on low-bandwidth connections, defer's update until new max hit)
+
+* Fri Jul 24 2009 Clark Williams <williams@redhat.com> - 0.50-2
+- minor patch to fix reporting option of hwlatdetect
+
+* Thu Jul 16 2009 Clark Williams <williams@redhat.com> - 0.50-1
+- patch to cyclictest from Sebastian Andrzej Siewior <bigeasy@linutronix.de> 
+  to process options before checking for root user
+- patch to cyclictest from Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+  to exit with proper error code on exit
+- added scripts/do-git-push script
+- added push target to Makefile
+- rewrite of hwlatdetect script to handle old smi_detector module
+
+* Sun Jul  5 2009 Clark Williams <williams@redhat.com> - 0.47-1
+- patch from GeunSik Lim <leemgs1@gmail.com> to reorder options for readability
+- patch from GeunSik Lim <leemgs1@gmail.com> to add --policy option
+- patch from GeunSik Lim <leemgs1@gmail.com> to clarify -h option usage
+- modified --policy to take scheduler policy name instead of integers
+
+* Thu Jul  2 2009 Clark Williams <williams@redhat.com> - 0.46-1
+- added fix from Daniel Gollub <dgollub@suse.de> (doomsday latency)
+
+* Thu Jul  2 2009 Clark Williams <williams@redhat.com> - 0.45-1
+- bugfix from Daniel Gollub <dgollub@suse.de> (fix cyclictest segfault)
+- cyclictest format change from Sven-Thorsten Dietrich <sdietrich@suse.de>
+- added help target to Makefile
+
+* Tue Jun 30 2009 Clark Williams <williams@redhat.com> - 0.44-1
+- fix to specfile (renamed smidetect to hwlatdetect)
+- added code to hwlatdetect allow setting window and width properly
+
+* Thu Jun 25 2009 Clark Williams <williams@redhat.com> - 0.43-1
+- manpage fixes from Uwe Kleine-Konig <u.kleine-koenig@pengutronix.de>
+
+* Fri Jun 12 2009 Clark Williams <williams@redhat.com> - 0.42-1
+- renamed smidetect -> hwlatdetect
+
+* Thu May 28 2009 Clark Williams <williams@redhat.com> - 0.41-1
+- added Stefan Agner's patch to fix calculating time difference
+  when delta is bigger than 2147 seconds
+
+* Wed May 13 2009 Clark Williams <williams@redhat.com> - 0.40-1
+- added smidetect
+
+* Thu Jan 03 2008 Clark Williams <williams@redhat.com> - 0.18-1
+- Initial build.
+

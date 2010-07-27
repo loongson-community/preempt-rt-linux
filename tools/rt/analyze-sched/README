@@ -1,0 +1,19 @@
+# This is a simple howto to use the tool with gtkwave
+#
+# Info also at: http://www.osadl.org/Single-View.111+M5d51b7830c8.0.html
+#
+
+mount -t debugfs debugfs /debug
+echo sched_switch > /debug/tracing/current_tracer
+echo 1 > /debug/tracing/tracing_enabled
+
+#<run your realtime test here>
+#../rt-tests/cyclictest -t1 -p99 -n -m -i100 -l100000
+pushd ../test-deadline/
+./test_stop.sh
+popd
+
+echo 0 > /debug/tracing/tracing_enabled
+cat /debug/tracing/trace >/tmp/trace.txt
+./analyze /tmp/trace.txt /tmp/trace.vcd
+gtkwave /tmp/trace.vcd

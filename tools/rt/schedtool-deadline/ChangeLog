@@ -1,0 +1,36 @@
+commit 61dd64791377f27b121f714a03bd190df0310f7f
+Author: administrator <root@localhost.(none)>
+Date:   Fri Jan 29 22:14:23 2010 +0800
+
+    Add SCHED_EDF(DEADLINE) support for MIPS
+
+commit b66b355ac74a2f9d5f630bc18131c67a666e37b3
+Author: Raistlin <raistlin@linux.it>
+Date:   Thu Oct 15 12:05:49 2009 +0200
+
+    Alignement with the newest API.
+
+commit 0f137aa5fba19ba001936f80f26833f016f97271
+Author: root <root@debian.(none)>
+Date:   Fri Oct 9 16:19:07 2009 +0200
+
+    New alignement with trunk code.
+    
+    Support for the newer sched_param_ex, with period and flags fields.
+
+commit f22e318a9268ab248f1062eb4e5f00509ff7fdcc
+Author: Dario Faggioli <faggioli@gandalf.sssup.it>
+Date:   Mon Aug 10 19:23:42 2009 +0200
+
+    Adapatation needed for development branch
+    
+    The tool is further modified to mach with the current development
+    branch of SCHED_EDF (the one in sched-devel-edf of the sched-edf.git repo).
+
+commit 208d247010380637f0490a894f737b67f07d44d0
+Author: michael <michael@panicking.kicks-ass.org>
+Date:   Mon Jun 15 16:57:43 2009 +0200
+
+    Schedtool that support sched_edf scheduler
+    
+    Signed-off-by: Michael Trimarchi <michael@evidence.eu.com>

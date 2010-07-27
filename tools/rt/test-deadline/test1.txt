@@ -1,0 +1,2 @@
+name	wcet	deadline	period	CPU
+task3	50	150	100	0

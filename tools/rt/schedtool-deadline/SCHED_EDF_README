@@ -1,0 +1,8 @@
+
+A simple example for setting the program policy as SCHED_EDF:
+(The current name for SCHED_EDF in kernel space is SCHED_DEADLINE)
+
+              EDF(deadline) policy             CPU0  Period
+               V                                V     V 
+$ ./schedtool -E -d 30000   -b 10000    -p 0   -a0  -g50000    -e yes   2>&1 > /dev/null
+                  ^ deadline  ^ runtime   ^ priority   ^ execute the yes program
