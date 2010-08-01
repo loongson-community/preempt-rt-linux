@@ -1170,7 +1170,8 @@ struct sched_class {
 	void (*put_prev_task) (struct rq *rq, struct task_struct *p);
 
 #ifdef CONFIG_SMP
-	int  (*select_task_rq)(struct task_struct *p, int sd_flag, int flags);
+	int  (*select_task_rq)(struct rq *rq, struct task_struct *p,
+			       int sd_flag, int flags);
 
 	unsigned long (*load_balance) (struct rq *this_rq, int this_cpu,
 			struct rq *busiest, unsigned long max_load_move,
@@ -2036,6 +2037,7 @@ extern void sched_clock_idle_sleep_event(void);
 extern void sched_clock_idle_wakeup_event(u64 delta_ns);
 
 #ifdef CONFIG_HOTPLUG_CPU
+extern void move_task_off_dead_cpu(int dead_cpu, struct task_struct *p);
 extern void idle_task_exit(void);
 #else
 static inline void idle_task_exit(void) {}
@@ -2288,7 +2290,7 @@ extern struct mm_struct * mm_alloc(void);
 
 /* mmdrop drops the mm and the page tables */
 extern void __mmdrop(struct mm_struct *);
-extern void __mmdrop_delayed(struct mm_struct *);
+extern void __mmdrop_delayed(struct mm_struct *, int wake);
 
 static inline void mmdrop(struct mm_struct * mm)
 {
@@ -2296,10 +2298,10 @@ static inline void mmdrop(struct mm_struct * mm)
 		__mmdrop(mm);
 }
 
-static inline void mmdrop_delayed(struct mm_struct * mm)
+static inline void mmdrop_delayed(struct mm_struct * mm, int wake)
 {
 	if (atomic_dec_and_test(&mm->mm_count))
-		__mmdrop_delayed(mm);
+		__mmdrop_delayed(mm, wake);
 }
 
 /* mmput gets rid of the mappings and all user-space */
