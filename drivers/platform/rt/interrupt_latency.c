@@ -196,8 +196,8 @@ static void set_irq_and_get_time(void)
 static void irq_enable(void)
 {
 	local_irq_disable();
-	set_irq_and_get_time();
 	reset_variables();
+	set_irq_and_get_time();
 	local_irq_enable();
 }
 
@@ -307,8 +307,8 @@ static int init_irq(void)
 		return -EFAULT;
 
 	local_irq_disable();
-	set_irq_and_get_time();
 	reset_variables();
+	set_irq_and_get_time();
 	local_irq_enable();
 
 	ret = setup_irq(IRQ_NUM, &irq_action);
