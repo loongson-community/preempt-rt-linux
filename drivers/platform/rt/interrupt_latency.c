@@ -88,7 +88,7 @@ static char *msg_Ptr;
 
 static u32 mfgpt_base;
 static int interval = 1000, period = PERIOD;	/* us */
-static struct timeval ti, th, te, tc, diff;
+static struct timeval ti, th, te, ts, diff;
 static u64 sum;
 static u32 total, max = 0, min = UINT_MAX;
 
@@ -181,10 +181,22 @@ static void reset_variables(void)
 	irq_on = 0;
 }
 
+static void set_irq_and_get_time(void)
+{
+	/*
+	 * Set the interrupt for being emitted after 'period' us from current.
+	 */
+	arch_irq_enable();
+	/*
+	 * get the time when setting the interrupt
+	 */
+	do_gettimeofday(&ts);
+}
+
 static void irq_enable(void)
 {
 	local_irq_disable();
-	arch_irq_enable();
+	set_irq_and_get_time();
 	reset_variables();
 	local_irq_enable();
 }
@@ -193,8 +205,8 @@ static void irq_disable(void)
 {
 	arch_irq_disable();
 	reset_variables();
-	tc.tv_sec = 0;
-	tc.tv_usec = 0;
+	ts.tv_sec = 0;
+	ts.tv_usec = 0;
 }
 
 static int enable_diff_output;
@@ -243,7 +255,7 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 	/*
 	 * Interrupt time = The time we enabled the interrupt + its period
 	 */
-	ti = tc;
+	ti = ts;
 	ti.tv_usec += period;
 
 	/* Calculate the latency: Handle time - Interrupt time */
@@ -267,11 +279,9 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
 	msleep(interval / 1000);
 	local_irq_disable();
 #endif
-	/* We get a more accurate interrupt time in the arch_irq_eanble() */
-	if (enable_tracing) {
-		arch_irq_enable();
-		do_gettimeofday(&tc);	/* get the interrupt time */
-	}
+	/* Set the interrupt and get the time of setting */
+	if (enable_tracing)
+		set_irq_and_get_time();
 	local_irq_enable();
 
 	return IRQ_HANDLED;
@@ -297,7 +307,7 @@ static int init_irq(void)
 		return -EFAULT;
 
 	local_irq_disable();
-	arch_irq_enable();
+	set_irq_and_get_time();
 	reset_variables();
 	local_irq_enable();
 
